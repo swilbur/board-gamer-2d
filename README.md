@@ -4,40 +4,28 @@
 
 ## Demo
 
-http://board-gamer-2d.wolfesoftware.com/
+http://boardgames.telemin.net/
+Ask me for the password if you're not a spambot.
 
 ## Status
 
 Working:
 
- * Create and join rooms. Empty rooms are deleted after an hour.
+ * Create and join rooms. Empty rooms are deleted after an week.
  * Some objects are supported out of the box: Deck of 52 playing cards, d6 dice, checker board and checkers.
- * Decent controls to manipulate objects: Examine, group together, spread apart, move around, flip over.
+ * Decent controls to manipulate objects: Examine, group together, move around, flip over.
+ * Numeric labels on objects: useful for tracking hit points, Twilight Struggle influence, etc.
  * RNG Controls: Shuffle a stack, roll objects to show a random side.
  * Multiplayer experience is synced when you let go of the mouse, requiring fairly low network traffic.
  * Objects can be "locked" to serve as a background, and they can define a snap-to-grid area.
  * Individual players can have a special area where only they can see all sides of the objects in it;
    in other words, their hand of cards is hidden from opponents.
- * Undo/redo history is maintained server-side per room, and is accessible by any client even after joining late or refreshing the page.
+ * Game log is maintained server-side per room, and is accessible by any client even after joining late or refreshing the page.
+ * Rudimentary chat ability in the game log
 
 Planned:
 
- * Multiplayer gameplay:
-   * Spawn textboxes on the table that everyone can see and edit.
-   * Number counters for keeping track of score. Basic calculator functions, like add and subtract.
-   * A "turn order" widget that accepts a hotkey for "my turn is done", and plays a sound for the next player.
-   * A stopwatch widget and a timer widget.
-   * An interactive undo/redo tree explorer.
-   * Sound effects and animations for shuffling and some other actions.
- * Workshop for creating your own games:
-   * Any player can switch in and out of workshop mode while playing a game.
-   * Upload images, crop/rotate images.
-   * Add arbitrary text to objects.
-   * Define snap grids on objects.
-   * A "closet" with standard objects ready to import (french deck, d6 dice, etc.).
-   * A "box" with objects relevant to your game that are not currently on the table.
-   * Define a fixed limit for number of players, and assign each player a unique color. Objects can be associated with each player.
-   * Define no limit on the number of players. Players would be listed in a scrolling box, and each player gets a mini-table defined by a template.
+ * log in with your username, get a list of your active games
 
 ## Philosophy
 
@@ -87,3 +75,7 @@ Board Gamer 2d uses a random number generator for dice rolls and coin flips.
 
 Tabletop Simulator's system for creating a deck of cards has numerous problems.
 The Board Gamer 2d engine allows arbitrary images or spritesheets with arbitrary coordinates and dimensions for all objects.
+
+## Copyrighted Game Assets
+
+Some of the game files (e.g. twilight_struggle.js) use copyrighted assets.  These are not redistributed here, but most can be found online (e.g. at the publisher's website, boardgamegeek.com, twilightstrategy.com, etc.)

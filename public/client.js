@@ -1,4 +1,3 @@
-
 var roomCode = null;
 var myUser;
 
@@ -84,7 +83,8 @@ var objectsById;
 var objectsWithSnapZones; // cache
 var hiderContainers; // cache
 var changeHistory;
-var futureChanges;
+//var futureChanges;
+var gameLog;
 function initGame(game, history) {
   gameDefinition = game;
   objectDefinitionsById = {};
@@ -94,6 +94,8 @@ function initGame(game, history) {
   hiderContainers = [];
   changeHistory = [];
   futureChanges = [];
+  gameLog = "";
+  document.getElementById("logContentsDiv").innerHTML = gameLog;
   for (var i = 0; i < gameDefinition.objects.length; i++) {
     var rawDefinition = gameDefinition.objects[i];
     var id = rawDefinition.id;
@@ -114,7 +116,11 @@ function initGame(game, history) {
       faces: objectDefinition.faces,
       snapZones: objectDefinition.snapZones || [],
       locked: !!objectDefinition.locked,
-      faceIndex: 0,
+      immobile: !!objectDefinition.immobile,
+      faceIndex: objectDefinition.faceIndex || 0,
+      hasLabel: objectDefinition.hasLabel ? true : false,
+      label: objectDefinition.label || 0,
+      labelColor: objectDefinition.labelColor || [],
     };
     objectsById[id] = object;
     if (object.snapZones.length > 0) objectsWithSnapZones.push(object);
@@ -276,7 +282,9 @@ function fixFloatingThingZ() {
     }
   });
   document.getElementById("roomInfoDiv").style.zIndex = z++;
+  document.getElementById("logDiv").style.zIndex = z++;
   document.getElementById("helpDiv").style.zIndex = z++;
+  document.getElementById("rollingDiv").style.zIndex = z++;
   modalMaskDiv.style.zIndex = z++;
   editUserDiv.style.zIndex = z++;
 }
@@ -311,7 +319,7 @@ function onObjectMouseDown(event) {
   if (examiningMode !== EXAMINE_NONE) return;
   var objectDiv = this;
   var object = objectsById[objectDiv.dataset.id];
-  if (object.locked) return; // click thee behind me, satan
+  if (object.locked || object.immobile) return; // click thee behind me, satan
   event.preventDefault();
   event.stopPropagation();
 
@@ -397,7 +405,7 @@ document.addEventListener("mousemove", function(event) {
       if (minY > maxY) { var tmp = maxY; maxY = minY; minY = tmp; }
       var newSelectedObjects = [];
       getObjects().forEach(function(object) {
-        if (object.locked) return;
+        if (object.locked || object.immobile) return;
         if (object.x > maxX) return;
         if (object.y > maxY) return;
         if (object.x + object.width  < minX) return;
@@ -456,6 +464,7 @@ document.addEventListener("mouseup", function(event) {
     commitSelection(selectedObjectIdToNewProps);
     resizeTableToFitEverything();
     renderOrder();
+    setSelectedObjects([]); //TESTING, might not be a good idea
   }
 });
 
@@ -499,6 +508,7 @@ function newPropsForObject(object) {
     y: object.y,
     z: object.z,
     faceIndex: object.faceIndex,
+    label: object.label,
   };
 }
 function getEffectiveSelection(objects) {
@@ -520,7 +530,8 @@ function renderAndMaybeCommitSelection(selection) {
     if (!(object.x === newProps.x &&
           object.y === newProps.y &&
           object.z === newProps.z &&
-          object.faceIndex === newProps.faceIndex)) {
+          object.faceIndex === newProps.faceIndex &&
+          object.label === newProps.label)) {
       objectsToRender.push(object);
     }
   }
@@ -545,22 +556,26 @@ function commitSelection(selection) {
     if (!(object.x === newProps.x &&
           object.y === newProps.y &&
           object.z === newProps.z &&
-          object.faceIndex === newProps.faceIndex)) {
+          object.faceIndex === newProps.faceIndex &&
+          object.label === newProps.label)) {
       move.push(
         objectIndexesById[object.id],
         object.x,
         object.y,
         object.z,
         object.faceIndex,
+        object.label,
         newProps.x,
         newProps.y,
         newProps.z,
-        newProps.faceIndex);
+        newProps.faceIndex,
+        newProps.label);
       // anticipate
       object.x = newProps.x;
       object.y = newProps.y;
       object.z = newProps.z;
       object.faceIndex = newProps.faceIndex;
+      object.label = newProps.label;
     }
   }
   if (move.length <= 1) return;
@@ -599,7 +614,7 @@ document.addEventListener("keydown", function(event) {
       if (modifierMask === 0) { flipOverSelection(); break; }
       return;
     case "G".charCodeAt(0):
-      if (modifierMask === 0 && accordionMouseStartX == null) { groupSelection(); startAccordion(); isGKeyDown = true; break; }
+      if (modifierMask === 0 && accordionMouseStartX == null) { groupSelection(); /*startAccordion(); isGKeyDown = true;*/ break; }
       return;
     case 27: // Escape
       if (modifierMask === 0 && numberTypingBuffer.length > 0) { consumeNumberModifier(); break; }
@@ -607,8 +622,8 @@ document.addEventListener("keydown", function(event) {
       if (modifierMask === 0 && draggingMode === DRAG_NONE)           { setSelectedObjects([]); break; }
       return;
     case "Z".charCodeAt(0):
-      if (draggingMode === DRAG_NONE && modifierMask === CTRL)         { undo(); break; }
-      if (draggingMode === DRAG_NONE && modifierMask === (CTRL|SHIFT)) { redo(); break; }
+      //if (draggingMode === DRAG_NONE && modifierMask === CTRL)         { undo(); break; }
+      //if (draggingMode === DRAG_NONE && modifierMask === (CTRL|SHIFT)) { redo(); break; }
       if (modifierMask === 0)     { examineSingle(); break; }
       if (modifierMask === SHIFT) { examineMulti(); break; }
       return;
@@ -625,6 +640,27 @@ document.addEventListener("keydown", function(event) {
       if (modifierMask === 0) { typeNumber(numberValue); break; }
       return;
 
+    case 61: case 187: // equals
+      if(modifierMask != SHIFT) return;
+    case 107: // plus
+      incrementLabel();
+      break;
+    case 109: case 173: case 189: // minus
+      decrementLabel();
+      break;
+
+    case "L".charCodeAt(0):
+      toggleLog();
+      break;
+
+    case 13: // enter
+      var message = prompt("Enter a message:", "");
+      if (message === null) break;
+      message = "<b>" + myUser.userName + "(" + myUser.role + "): " + message + "</b><br>";
+      sendMessage({cmd: "logMessage", args: message});
+      document.getElementById("logContentsDiv").innerHTML += message;
+      break;
+
     default: return;
   }
   event.preventDefault();
@@ -635,9 +671,9 @@ document.addEventListener("keyup", function(event) {
     case "Z".charCodeAt(0):
       unexamine();
       break;
-    case "G".charCodeAt(0):
+    /*case "G".charCodeAt(0):
       if (modifierMask === 0) { stopAccordion(); isGKeyDown = false; break; }
-      return;
+      return;*/
     default: return;
   }
   event.preventDefault();
@@ -676,6 +712,7 @@ function rollSelection() {
     var object = objectsById[id];
     var newProps = selection[id];
     newProps.faceIndex = Math.floor(Math.random() * object.faces.length);
+    if (object.faces.length > 1) object.faceIndex = -1; //be sure to commit the roll even if it lands on the same number it was on previously
   }
   renderAndMaybeCommitSelection(selection);
   renderOrder();
@@ -843,10 +880,20 @@ function clearNumberBuffer() {
 
 var isHelpShown = true;
 var isHelpMouseIn = false;
+
+var isLogShown = false;
+var isLogMouseIn = false;
+
 function toggleHelp() {
   isHelpShown = !isHelpShown;
   renderHelp();
 }
+
+function toggleLog() {
+  isLogShown = !isLogShown;
+  renderLog();
+}
+
 document.getElementById("helpDiv").addEventListener("mousemove", function() {
   if (draggingMode !== DRAG_NONE) return;
   isHelpMouseIn = true;
@@ -856,6 +903,17 @@ document.getElementById("helpDiv").addEventListener("mouseout", function() {
   isHelpMouseIn = false;
   renderHelp();
 });
+
+document.getElementById("logDiv").addEventListener("mousemove", function() {
+  if (draggingMode !== DRAG_NONE) return;
+  isLogMouseIn = true;
+  renderLog();
+});
+document.getElementById("logDiv").addEventListener("mouseout", function() {
+  isLogMouseIn = false;
+  renderLog();
+});
+
 function renderHelp() {
   if (isHelpShown || isHelpMouseIn) {
     document.getElementById("helpDiv").classList.add("helpExpanded");
@@ -864,6 +922,39 @@ function renderHelp() {
   }
 }
 
+function renderLog() {
+  if (isLogShown || isLogMouseIn) {
+    document.getElementById("logDiv").classList.add("logExpanded");
+  } else {
+    document.getElementById("logDiv").classList.remove("logExpanded");
+  }
+}
+
+function incrementLabel() {
+  var selection = getEffectiveSelection();
+  for (var id in selection) {
+    var object = objectsById[id];
+    if (!object.hasLabel) continue;
+    var newProps = selection[id];
+    newProps.label++;
+  }
+  renderAndMaybeCommitSelection(selection);
+  renderOrder();
+}
+
+function decrementLabel() {
+  var selection = getEffectiveSelection();
+  for (var id in selection) {
+    var object = objectsById[id];
+    if (!object.hasLabel) continue;
+    var newProps = selection[id];
+    newProps.label--;
+  }
+  renderAndMaybeCommitSelection(selection);
+  renderOrder();
+}
+
+/*
 function undo() { undoOrRedo(changeHistory, futureChanges); }
 function redo() { undoOrRedo(futureChanges, changeHistory); }
 function undoOrRedo(thePast, theFuture) {
@@ -914,10 +1005,11 @@ function reverseChange(move) {
   resizeTableToFitEverything();
 
   return newMove;
-}
+}*/
 function pushChangeToHistory(change) {
   changeHistory.push(change);
-  futureChanges = [];
+  document.getElementById("logContentsDiv").innerHTML += moveToString(change);
+  //futureChanges = [];
 }
 
 function eventToMouseX(event, div) { return event.clientX - div.getBoundingClientRect().left; }
@@ -1009,7 +1101,7 @@ var submitYourNameButton = document.getElementById("submitYourNameButton");
 submitYourNameButton.addEventListener("click", submitYourName);
 function submitYourName() {
   var newName = yourNameTextbox.value;
-  if (newName && newName !== myUser.userName) {
+  if (newName && newName !== myUser.role) {
     sendMessage({
       cmd: "changeMyName",
       args: newName,
@@ -1020,7 +1112,35 @@ function submitYourName() {
   }
 }
 var yourRoleDropdown = document.getElementById("yourRoleDropdown");
-yourRoleDropdown.addEventListener("change", function() {
+var submitYourRoleButton = document.getElementById("submitYourRoleButton");
+submitYourRoleButton.addEventListener("click", submitYourRole);
+var yourRolePasswordTextBox = document.getElementById("yourRolePassword");
+yourRolePasswordTextBox.addEventListener("keydown", function(event) {
+  event.stopPropagation();
+  if (event.keyCode === 13) {
+    setTimeout(function() {
+      submitYourRole();
+      closeDialog();
+    }, 0);
+  } else if (event.keyCode === 27) {
+    setTimeout(closeDialog, 0);
+  }
+});
+
+function submitYourRole() {
+  var newRole = yourRoleDropdown.value;
+  if (newRole !== myUser.role) {
+    sendMessage({
+      cmd: "changeMyRole",
+      args: {
+        newRole: newRole,
+        password: yourRolePassword.value,
+      }
+    });
+  }
+}
+
+/*yourRoleDropdown.addEventListener("change", function() {
   setTimeout(function() {
     var role = yourRoleDropdown.value;
     sendMessage({
@@ -1034,7 +1154,7 @@ yourRoleDropdown.addEventListener("change", function() {
     getObjects().forEach(render);
     fixFloatingThingZ();
   }, 0);
-});
+});*/
 document.getElementById("closeEditUserButton").addEventListener("click", closeDialog);
 
 function render(object, isAnimated) {
@@ -1200,9 +1320,21 @@ function renderOrder() {
     idAndZList.forEach(function(idAndZ, i) {
       if (idAndZ.id in examiningObjectsById) return;
       var stackHeightDiv = getStackHeightDiv(idAndZ.id);
+      var object = objectsById[idAndZ.id];
       if (i > 0) {
         stackHeightDiv.textContent = (i + 1).toString();
         stackHeightDiv.style.display = "block";
+        stackHeightDiv.className = "stackHeight";
+        stackHeightDiv.style.color = "#000000";
+      } else if (object.hasLabel && object.label != 0) {
+        stackHeightDiv.textContent = (object.label).toString();
+        stackHeightDiv.style.display = "block";
+        stackHeightDiv.className = "itemLabel";
+        if (object.labelColor.length > object.faceIndex){
+          stackHeightDiv.style.color = object.labelColor[object.faceIndex];
+        } else {
+         stackHeightDiv.style.color = "#000000"; 
+        }
       } else {
         stackHeightDiv.style.display = "none";
       }
@@ -1339,15 +1471,18 @@ function operatorCompare(a, b) {
 }
 
 function makeWebSocket() {
-  var host = location.host;
+  //var host = location.host; // deployment
+  var host = "127.0.0.1"; // local testing
   var pathname = location.pathname;
   var isHttps = location.protocol === "https:";
   var match = host.match(/^(.+):(\d+)$/);
   var defaultPort = isHttps ? 443 : 80;
-  var port = match ? parseInt(match[2], 10) : defaultPort;
+  //var port = match ? parseInt(match[2], 10) : defaultPort; // deployment
+  var port = "25407"; // local testing
   var hostName = match ? match[1] : host;
   var wsProto = isHttps ? "wss:" : "ws:";
   var wsUrl = wsProto + "//" + hostName + ":" + port + pathname;
+  console.log(wsUrl);
   return new WebSocket(wsUrl);
 }
 
@@ -1366,17 +1501,20 @@ function connectToServer() {
     isConnected = true;
     console.log("connected");
     var roomCodeToSend = roomCode;
+    var gameName = ""
     if (roomCode != null) {
       roomCodeToSend = roomCode;
       setScreenMode(SCREEN_MODE_WAITING_FOR_ROOM_CODE_CONFIRMATION);
     } else {
       roomCodeToSend = "new";
+      gameName = document.getElementById("selectGame").value;
       setScreenMode(SCREEN_MODE_WAITING_FOR_CREATE_ROOM);
     }
     sendMessage({
       cmd: "joinRoom",
       args: {
         roomCode: roomCodeToSend,
+        gameName: gameName
       },
     });
   }
@@ -1412,7 +1550,7 @@ function connectToServer() {
         } else throw asdf;
         break;
       case SCREEN_MODE_PLAY:
-        if (message.cmd === "makeAMove") {
+        if (message.cmd === "makeAMove" || message.cmd === "logMessage") {
           makeAMove(message.args, true);
         } else if (message.cmd === "userJoined") {
           usersById[message.args.id] = {
@@ -1428,6 +1566,10 @@ function connectToServer() {
           usersById[message.args.id].userName = message.args.userName;
           renderUserList();
         } else if (message.cmd === "changeMyRole") {
+          if (message.args.id === ""){ //failed
+            window.alert("That role has already been chosen and a different password set.");
+            break;
+          }
           usersById[message.args.id].role = message.args.role;
           renderUserList();
         }
@@ -1463,6 +1605,11 @@ function sendMessage(message) {
   socket.send(JSON.stringify(message));
 }
 function makeAMove(move, shouldRender) {
+  if(typeof move === "string"){ // it's just a log message
+    document.getElementById("logContentsDiv").innerHTML += move;
+    return;
+  }
+
   var objectsToRender = shouldRender ? [] : null;
   var i = 0;
   var userId = move[i++];
@@ -1473,20 +1620,24 @@ function makeAMove(move, shouldRender) {
     var fromY         =      move[i++];
     var fromZ         =      move[i++];
     var fromFaceIndex =      move[i++];
+    var fromLabel     =      move[i++];
     var   toX         =      move[i++];
     var   toY         =      move[i++];
     var   toZ         =      move[i++];
     var   toFaceIndex =      move[i++];
+    var   toLabel     =      move[i++];
     object.x = toX;
     object.y = toY;
     object.z = toZ;
     object.faceIndex = toFaceIndex;
+    object.label = toLabel;
     var newProps = selectedObjectIdToNewProps[object.id];
     if (newProps != null) {
       newProps.x = toX;
       newProps.y = toY;
       newProps.z = toZ;
       newProps.faceIndex = toFaceIndex;
+      newProps.label = label;
     }
     if (shouldRender) objectsToRender.push(object);
   }
@@ -1500,6 +1651,131 @@ function makeAMove(move, shouldRender) {
     fixFloatingThingZ();
   }
   pushChangeToHistory(move);
+}
+
+function moveToString(move){
+  var i = 0;
+  var userId = move[i++];
+
+  // userID -> userRole is now handled by the server for other players
+  var userName = (userId === myUser.id) ? myUser.userName + "(" + myUser.role + ")" : userId;
+
+  var object = [];
+  var fromX = [];
+  var fromY = [];
+  var fromZ = [];
+  var fromFaceIndex = [];
+  var fromLabel = [];
+  var toX = [];
+  var toY = [];
+  var toZ = [];
+  var toFaceIndex = [];
+  var toLabel = [];
+
+  while(i<move.length){
+    object.push(objectsById[getIdFromIndex(move[i++])]);
+    fromX.push(move[i++]);
+    fromY.push(move[i++]);
+    fromZ.push(move[i++]);
+    fromFaceIndex.push(move[i++]);
+    fromLabel.push(move[i++]);
+    toX.push(move[i++]);
+    toY.push(move[i++]);
+    toZ.push(move[i++]);
+    toFaceIndex.push(move[i++]);
+    toLabel.push(move[i++]);
+  }
+
+  var output = "";
+  // calculate change type:  Move (change x,y), Flip (change faceIndex), Roll (fromFaceIndex == -1), Shuffle (change z), Group (move all to same x,y), Label (change label)
+
+  var stayInPlace = (object.length > 1);
+  var endSameXY = (object.length > 1);
+  for(var i=0; i<object.length; i++){
+    if(/*fromX[i] != fromX[0] || fromY[i] != fromY[0] ||*/ fromX[i] != toX[i] || fromY[i]!= toY[i]) stayInPlace = false;
+    if(toX[i] != toX[0] || toY[i] != toY[0]) endSameXY = false;
+  }
+
+  if (fromFaceIndex[0] == -1){ // Roll
+    output += userName + " rolls " + possiblyHiddenName(object[0]);
+    for(var i=1; i<object.length; i++) output += ", " + possiblyHiddenName(object[i]);
+    output += ":";
+    for(var i=0; i<object.length; i++) output += " " + (isHidden(toX[0] + object[0].width, toY[0] + object[0].height) ? "?" : toFaceIndex[i]+1);
+    output += "<br>";
+    var rollingMsg = document.getElementById("rollingDiv").children[0];
+    rollingMsg.classList.remove("show");
+    void rollingMsg.offsetWidth; // trigger a reflow so it shows again
+    rollingMsg.classList.add("show");
+  } else if (fromFaceIndex[0] != toFaceIndex[0]){ // Flip
+    if(object.length > 1){
+      var minX = 99999;
+      var maxX = -99999;
+      var minY = 99999;
+      var maxY = -99999;
+      for(var i=0; i<object.length; i++){
+        if(isHidden(toX[i] + object[i].width, toY[i] + object[i].height) ) continue; // comment this out if people need to roll dice behind a screen and aren't allowed to freely adjust them.
+        if (toX[i] < minX) minX = toX[i];
+        if (toX[i] > maxX) maxX = toX[i];
+        if (toY[i] < minY) minY = toY[i];
+        if (toY[i] > maxY) maxY = toY[i];
+      }
+      if(minX == 99999) return ""; // everything was hidden
+      output += userName + " flips " + object.length + " objects in (" + minX + ", " + minY + ") - (" + maxX + ", " + maxY + ")<br>";
+    } else {
+      if(isHidden(toX[0] + object[0].width, toY[0] + object[0].height) ) return ""; // comment this out if people need to roll dice behind a screen and aren't allowed to freely adjust them.
+      output += userName + " flips " + object[0].id;
+      if(object[0].faces.length > 2) output += " to " + (toFaceIndex[0]+1);
+      output += "<br>";
+    }
+  } else if (fromLabel[0] != toLabel[0]){ // Label
+    for(var i=0; i<object.length; i++){
+      if(isHidden(toX[i] + object[i].width, toY[i] + object[i].height) ) continue;
+      output += userName + " changes the label of " + object[i].id + " from " + fromLabel[i] + " to " + toLabel[i] + "<br>";
+    }
+  } else { //Move, Shuffle, or Group
+
+    if(stayInPlace){ // Shuffle
+      if(isHidden(toX[0] + object[0].width, toY[0] + object[0].height) ) return "";
+      output += userName + " shuffles " + object.length + " objects at (" + toX[0] + ", " + toY[0] + ")<br>";
+    } else if (endSameXY){ // Group
+      var tell=false;
+      if(!isHidden(toX[0] + object[0].width, toY[0] + object[0].height) ) tell = true;
+      for(var i=0; i<object.length; i++) if(!isHidden(fromX[i] + object[i].width, fromY[i] + object[i].height) ) tell = true;
+      if(tell) output += userName + " moves " + object.length + " objects to (" + toX[0] + ", " + toY[0] + ")<br>";
+    } else { // Move
+      if(object.length == 1 && !isHidden(fromX[0] + object[0].width, fromY[0] + object[0].height) && !isHidden(fromX[0] + object[0].width, fromY[0] + object[0].height)){
+        var objectName = object[i].id;
+        if(object[i].faces.length === 2 && fromFaceIndex[i] === 1 && toFaceIndex[i] === 1) objectName = "*****"; // if it looks like a face-down card, hide the name
+        output += userName + " moves " + objectName + " from (" + fromX[i] + ", " + fromY[i] + ") to (" + toX[i] + ", " + toY[i] + ")<br>";
+      } else {
+        var hidden = true;
+        for(var i=0; i<object.length; i++){
+          if(!isHidden(fromX[i] + object[i].width, fromY[i] + object[i].height) || 
+             !isHidden(toX[i] + object[i].width, toY[i] + object[i].height) )
+            hidden = false;
+        }
+        if(hidden) return ""; // everything is hidden
+        output += userName + " moves " + object.length + " objects from (" + fromX[0] + ", " + fromY[0] + ") to (" + toX[0] + ", " + toY[0] + ")<br>";
+      }
+    }
+  }
+  return output;
+}
+
+function isHidden(x, y){
+  for (var i = 0; i < hiderContainers.length; i++) {
+    var hiderContainer = hiderContainers[i];
+    if (hiderContainer.x <= x && x <= hiderContainer.x + hiderContainer.width &&
+        hiderContainer.y <= y && y <= hiderContainer.y + hiderContainer.height) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function possiblyHiddenName(object){
+  if (isHidden(object.x + object.width/2, object.y + object.height/2)) return "*****";
+  return object.id;
 }
 
 function generateRandomId() {
