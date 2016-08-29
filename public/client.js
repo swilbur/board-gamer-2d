@@ -1744,9 +1744,9 @@ function moveToString(move){
       if(tell) output += userName + " moves " + object.length + " objects to (" + toX[0] + ", " + toY[0] + ")<br>";
     } else { // Move
       if(object.length == 1 && !isHidden(fromX[0] + object[0].width, fromY[0] + object[0].height) && !isHidden(fromX[0] + object[0].width, fromY[0] + object[0].height)){
-        var objectName = object[i].id;
-        if(object[i].faces.length === 2 && fromFaceIndex[i] === 1 && toFaceIndex[i] === 1) objectName = "*****"; // if it looks like a face-down card, hide the name
-        output += userName + " moves " + objectName + " from (" + fromX[i] + ", " + fromY[i] + ") to (" + toX[i] + ", " + toY[i] + ")<br>";
+        var objectName = object[0].id;
+        if(object[0].faces.length === 2 && fromFaceIndex[0] === 1 && toFaceIndex[0] === 1) objectName = "*****"; // if it looks like a face-down card, hide the name
+        output += userName + " moves " + objectName + " from (" + fromX[0] + ", " + fromY[0] + ") to (" + toX[0] + ", " + toY[0] + ")<br>";
       } else {
         var hidden = true;
         for(var i=0; i<object.length; i++){
