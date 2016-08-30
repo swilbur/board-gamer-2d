@@ -11,7 +11,7 @@ var screenMode = SCREEN_MODE_LOGIN;
 
 document.getElementById("createRoomButton").addEventListener("click", function() {
   roomCode = null;
-  connectToServer();
+  startGame();
 });
 document.getElementById("roomCodeTextbox").addEventListener("keydown", function(event) {
   event.stopPropagation();
@@ -34,7 +34,7 @@ document.getElementById("roomCodeTextbox").addEventListener("keydown", function(
 document.getElementById("joinRoomButton").addEventListener("click", submitRoomCode);
 function submitRoomCode() {
   roomCode = document.getElementById("roomCodeTextbox").value;
-  connectToServer();
+  startGame();
 }
 
 function setScreenMode(newMode) {
@@ -1498,6 +1498,27 @@ function makeWebSocket() {
   return new WebSocket(wsUrl);
 }
 
+function startGame() {
+  var roomCodeToSend = roomCode;
+  var gameName = ""
+  if (roomCode != null) {
+    roomCodeToSend = roomCode;
+    setScreenMode(SCREEN_MODE_WAITING_FOR_ROOM_CODE_CONFIRMATION);
+  } else {
+    roomCodeToSend = "new";
+    gameName = document.getElementById("selectGame").value;
+    setScreenMode(SCREEN_MODE_WAITING_FOR_CREATE_ROOM);
+  }
+  sendMessage({
+    cmd: "joinRoom",
+    args: {
+      roomCode: roomCodeToSend,
+      gameName: gameName
+    },
+  });
+}
+
+
 var socket;
 var isConnected = false;
 function connectToServer() {
@@ -1512,23 +1533,7 @@ function connectToServer() {
   function onOpen() {
     isConnected = true;
     console.log("connected");
-    var roomCodeToSend = roomCode;
-    var gameName = ""
-    if (roomCode != null) {
-      roomCodeToSend = roomCode;
-      setScreenMode(SCREEN_MODE_WAITING_FOR_ROOM_CODE_CONFIRMATION);
-    } else {
-      roomCodeToSend = "new";
-      gameName = document.getElementById("selectGame").value;
-      setScreenMode(SCREEN_MODE_WAITING_FOR_CREATE_ROOM);
-    }
-    sendMessage({
-      cmd: "joinRoom",
-      args: {
-        roomCode: roomCodeToSend,
-        gameName: gameName
-      },
-    });
+    setScreenMode(SCREEN_MODE_LOGIN);
   }
   function onMessage(event) {
     var msg = event.data;
@@ -1584,6 +1589,18 @@ function connectToServer() {
           }
           usersById[message.args.id].role = message.args.role;
           renderUserList();
+        }
+        break;
+      case SCREEN_MODE_LOGIN:
+        if (message.cmd === "listGames") {
+          var gameList = ""; //"<ul>\n";
+          for (var i in message.args){
+            var game = message.args[i];
+            gameList += "<li>" + game.id + ": " + game.gameName + "</li>\n";
+          }
+          //gameList += "</ul>";
+          document.getElementById("gameList").innerHTML = gameList;
+          console.log(document.getElementById("gameList").innerHTML);
         }
         break;
       default: throw asdf;
@@ -1785,6 +1802,11 @@ function isHidden(x, y){
   return false;
 }
 
+function listGames(userId){
+  if (!userId) userId = "";
+  sendMessage({cmd: "listGames", args: userId});
+}
+
 function possiblyHiddenName(object){
   if (isHidden(object.x + object.width/2, object.y + object.height/2)) return "*****";
   return object.id;
@@ -1824,4 +1846,4 @@ function clamp(n, min, max) {
   return n;
 }
 
-setScreenMode(SCREEN_MODE_LOGIN);
+connectToServer();
