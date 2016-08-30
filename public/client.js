@@ -464,7 +464,7 @@ document.addEventListener("mouseup", function(event) {
     commitSelection(selectedObjectIdToNewProps);
     resizeTableToFitEverything();
     renderOrder();
-    setSelectedObjects([]); //TESTING, might not be a good idea
+    setSelectedObjects([]);
   }
 });
 
@@ -694,7 +694,19 @@ function stopAccordion() {
 }
 
 function flipOverSelection() {
-  var selection = getEffectiveSelection();
+  var selection;
+  if (Object.keys(selectedObjectIdToNewProps).length > 0) {
+    // real selection
+    selection = selectedObjectIdToNewProps;
+  } else if (hoverObject != null){ 
+    // select all objects we're hovering over in this stack
+    var stackId = getStackId(hoverObject, hoverObject);
+    selection = {};
+    getObjects().forEach(function(object) {
+      if (stackId !== getStackId(object, object)) return;
+      selection[object.id] = newPropsForObject(object);
+    });
+  }
   for (var id in selection) {
     var object = objectsById[id];
     var newProps = selection[id];
