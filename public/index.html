@@ -126,7 +126,7 @@
       .itemLabel {
         background-color: rgba(256,256,256,0);
         pointer-events: none;
-        // border: 2px solid rgba(0,0,0,0.7);
+        /* border: 2px solid rgba(0,0,0,0.7); */
         font-size: 20px; font-weight: bold; font-family: monospace;
         /* center */
         position: absolute;
@@ -181,6 +181,7 @@
           <!--Hold G+Drag: Fan out selected objects.<br>-->
           Z: Examine object.<br>
           Shift+Z: Examine stack of objects.<br>
+          <!--(Shift+)T: Turn an object (counter-)clockwise.<br>-->
           <!--Ctrl+Z: Undo.<br>
           Ctrl+Y or Ctrl+Shift+Z: Redo.<br>-->
           Number+Click: Draw N objects from the top of a stack.<br>
@@ -217,6 +218,7 @@
       <p><input id="createRoomButton" type="button" class="largeTextButon" value="Create a Room"></p>
       <select id="selectGame">
         <option>Checkers</option>
+        <option>Star Wars: Rebellion</option>
         <option>Twilight Struggle</option>
         <option>War of the Ring</option>
       </select>

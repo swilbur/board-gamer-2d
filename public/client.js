@@ -1415,6 +1415,7 @@ function resizeTableToFitEverything() {
 }
 
 function snapToSnapZones(object, newProps) {
+  if (object.floating) return false;
   objectsWithSnapZones.sort(compareZ);
   for (var i = objectsWithSnapZones.length - 1; i >= 0; i--) {
     var containerObject = objectsWithSnapZones[i];
