@@ -651,8 +651,11 @@ document.addEventListener("keydown", function(event) {
       break;
 
     case "L".charCodeAt(0):
-      //toggleLog();
       setLabel();
+      break;
+
+    case 32: // space
+      toggleLog();
       break;
 
     case 13: // enter
