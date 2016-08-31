@@ -121,6 +121,7 @@ function initGame(game, history) {
       hasLabel: objectDefinition.hasLabel ? true : false,
       label: objectDefinition.label || 0,
       labelColor: objectDefinition.labelColor || [],
+      floating: !!objectDefinition.floating,
     };
     objectsById[id] = object;
     if (object.snapZones.length > 0) objectsWithSnapZones.push(object);
@@ -650,6 +651,10 @@ document.addEventListener("keydown", function(event) {
       break;
 
     case "L".charCodeAt(0):
+      setLabel();
+      break;
+
+    case 32: // space
       toggleLog();
       break;
 
@@ -948,6 +953,7 @@ function incrementLabel() {
     var object = objectsById[id];
     if (!object.hasLabel) continue;
     var newProps = selection[id];
+    if(typeof(newProps.label) != "number") newProps.label = 0;
     newProps.label++;
   }
   renderAndMaybeCommitSelection(selection);
@@ -960,7 +966,27 @@ function decrementLabel() {
     var object = objectsById[id];
     if (!object.hasLabel) continue;
     var newProps = selection[id];
+    if(typeof(newProps.label) != "number") newProps.label = 0;
     newProps.label--;
+  }
+  renderAndMaybeCommitSelection(selection);
+  renderOrder();
+}
+
+function setLabel(){
+  var selection = getEffectiveSelection();
+  var promptForLabel = false
+  for (var id in selection) {
+    var object = objectsById[id];
+    if (object.hasLabel) promptForLabel=true;
+  }
+  if (!promptForLabel) return;
+  var newLabel = prompt("Enter new label:", "");
+  var numericalLabel = parseInt(newLabel);
+  if(numericalLabel.toString() == newLabel) newLabel = numericalLabel;
+  for (var id in selection) {
+    var newProps = selection[id];
+    newProps.label = newLabel;
   }
   renderAndMaybeCommitSelection(selection);
   renderOrder();
@@ -1415,6 +1441,7 @@ function resizeTableToFitEverything() {
 }
 
 function snapToSnapZones(object, newProps) {
+  if (object.floating) return false;
   objectsWithSnapZones.sort(compareZ);
   for (var i = objectsWithSnapZones.length - 1; i >= 0; i--) {
     var containerObject = objectsWithSnapZones[i];
