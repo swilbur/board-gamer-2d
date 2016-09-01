@@ -36,6 +36,37 @@ function submitRoomCode() {
   roomCode = document.getElementById("roomCodeTextbox").value;
   startGame();
 }
+document.getElementById("userNameTextbox").addEventListener("keydown", function(event) {
+  event.stopPropagation();
+  if (event.keyCode === 13) {
+    document.getElementById("passwordTextbox").focus()
+  }
+});
+document.getElementById("passwordTextbox").addEventListener("keydown", function(event) {
+  event.stopPropagation();
+  if (event.keyCode === 13) {
+    setTimeout(sendLogin, 0);
+  }
+});
+document.getElementById("loginButton").addEventListener("click", sendLogin);
+var username="";
+var password="";
+function sendLogin() {
+  username = document.getElementById("userNameTextbox").value;
+  password = document.getElementById("passwordTextbox").value.hashCode();
+  console.log(username, password);
+}
+
+String.prototype.hashCode = function() {
+  var hash = 0, i, chr, len;
+  if (this.length === 0) return hash;
+  for (i = 0, len = this.length; i < len; i++) {
+    chr   = this.charCodeAt(i);
+    hash  = ((hash << 5) - hash) + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+};
 
 function setScreenMode(newMode) {
   screenMode = newMode;
@@ -1626,8 +1657,8 @@ function connectToServer() {
             gameList += "<li>" + game.id + ": " + game.gameName + "</li>\n";
           }
           //gameList += "</ul>";
-          document.getElementById("gameList").innerHTML = gameList;
-          console.log(document.getElementById("gameList").innerHTML);
+          document.getElementById("authentication").innerHTML = gameList;
+          console.log(document.getElementById("authentication").innerHTML);
         }
         break;
       default: throw asdf;

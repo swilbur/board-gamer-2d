@@ -163,6 +163,9 @@
         background: #fff;
         opacity: 0.8;
       }
+    hr {
+      width: 20em
+    }
     </style>
   </head>
   <body>
@@ -223,12 +226,18 @@
         <option>Twilight Struggle</option>
         <option>War of the Ring</option>
       </select>
+      <hr>
       <p>
         Join a Room:
         <input id="roomCodeTextbox" placeholder="Room Code" class="roomCode" maxlength=5 style="width: 7em;">
         <input id="joinRoomButton" type="button" class="largeTextButon" value="Join">
       </p>
-      <p id="gameList" style="display: block;"><b></b>
+      <hr>
+      <p id="authentication" style="display: block;">
+        Log in to see your games:<br>
+        <input id="userNameTextbox" placeholder="username" style="width: 10em">
+        <input id="passwordTextbox" type="password" placeholder="password" style="width: 10em">
+        <input id="loginButton" type="button" value="Log In">
       </p>
     </div>
     <div id="loadingDiv">
