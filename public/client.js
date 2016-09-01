@@ -372,6 +372,7 @@ function onObjectMouseMove(event) {
   setHoverObject(object);
 }
 function onObjectMouseOut(event) {
+  if (draggingMode != DRAG_NONE) return;
   var objectDiv = this;
   var object = objectsById[objectDiv.dataset.id];
   if (hoverObject === object) {
