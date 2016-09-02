@@ -1443,6 +1443,7 @@ function resizeTableToFitEverything() {
 
 function snapToSnapZones(object, newProps) {
   if (object.floating) return false;
+  var snapped = false;
   objectsWithSnapZones.sort(compareZ);
   for (var i = objectsWithSnapZones.length - 1; i >= 0; i--) {
     var containerObject = objectsWithSnapZones[i];
@@ -1485,10 +1486,11 @@ function snapToSnapZones(object, newProps) {
       }
       if (inBoundsY) newProps.x = divX * cellWidth  + newModX - object.width /2 + containerObject.x + snapZoneX;
       if (inBoundsX) newProps.y = divY * cellHeight + newModY - object.height/2 + containerObject.y + snapZoneY;
-      return true;
+      //return true;
+      snapped = true;
     }
   }
-  return false;
+  return snapped;
 }
 
 function getObjects() {
