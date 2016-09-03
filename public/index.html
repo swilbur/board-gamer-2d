@@ -140,7 +140,7 @@
         font-size: 10pt;
         font-family: monospace;
       }
-      ul {
+      #userListUl {
         margin: 0px;
         padding: 0px;
         list-style-type: none;
@@ -163,9 +163,10 @@
         background: #fff;
         opacity: 0.8;
       }
-    hr {
-      width: 20em
-    }
+      #errorMessageDiv {text-align: center; color: red}
+      hr {
+        width: 20em
+      }
     </style>
   </head>
   <body>
@@ -206,19 +207,28 @@
       <div id="numberBufferDiv" style="display: none;"></div>
       <div id="rollingDiv"><p>Rolling</p></div>
       <div id="editUserDiv" style="display: none;">
-        <p>
+        <!--p>
           <label>Name: <input id="yourNameTextbox" placeholder="Your name" maxlength=16></label>
           <input id="submitYourNameButton" type="button" value="Submit Name">
-        </p>
+        </p-->
         <p>
           <label>Role: <select id="yourRoleDropdown"></select></label>
-          <input id="yourRolePassword" placeholder="Password">
+          <!--input id="yourRolePassword" placeholder="Password"-->
           <input id="submitYourRoleButton" type="button" value="Submit Role"><br>
         </p>
         <p style="text-align: right;"><input id="closeEditUserButton" type="button" value="Close"></p>
       </div>
     </div>
     <div id="loginDiv" style="display: none; text-align: center; font-size: 15pt;">
+      <p>Log In:</p>
+      <p><input id="userNameTextbox" placeholder="username" style="width: 10em">
+      <input id="passwordTextbox" type="password" placeholder="password" style="width: 10em">
+      <input id="loginButton" type="button" value="Log In"> </p>
+      <p><input id="createAccountButton" type="button" value="Create Account"></p>
+    </div>
+    <div id="joinRoomDiv" style="display: none; text-align: center; font-size: 15pt;">
+      <p id="usernameReminder"></p>
+      <hr>
       <p><input id="createRoomButton" type="button" class="largeTextButon" value="Create a Room"></p>
       <select id="selectGame">
         <option>Checkers</option>
@@ -233,13 +243,9 @@
         <input id="joinRoomButton" type="button" class="largeTextButon" value="Join">
       </p>
       <hr>
-      <p id="authentication" style="display: block;">
-        Log in to see your games:<br>
-        <input id="userNameTextbox" placeholder="username" style="width: 10em">
-        <input id="passwordTextbox" type="password" placeholder="password" style="width: 10em">
-        <input id="loginButton" type="button" value="Log In">
-      </p>
+      <p id="gameList" style="margin:auto; text-align:left; display:inline-block"></p>
     </div>
+    <div id="errorMessageDiv"></div>
     <div id="loadingDiv">
       <p id="loadingMessageDiv">Please wait...</p>
     </div>
