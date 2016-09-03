@@ -3,15 +3,27 @@ var myUser;
 
 var SCREEN_MODE_DISCONNECTED = 0;
 var SCREEN_MODE_LOGIN = 1;
-var SCREEN_MODE_WAITING_FOR_SERVER_CONNECT = 2;
-var SCREEN_MODE_WAITING_FOR_CREATE_ROOM = 3;
-var SCREEN_MODE_WAITING_FOR_ROOM_CODE_CONFIRMATION = 4;
-var SCREEN_MODE_PLAY = 5;
+var SCREEN_MODE_JOIN_ROOM = 2;
+var SCREEN_MODE_WAITING_FOR_SERVER_CONNECT = 3;
+var SCREEN_MODE_WAITING_FOR_CREATE_ROOM = 4;
+var SCREEN_MODE_WAITING_FOR_ROOM_CODE_CONFIRMATION = 5;
+var SCREEN_MODE_PLAY = 6;
 var screenMode = SCREEN_MODE_LOGIN;
+
+String.prototype.hashCode = function() {
+  var hash = 0, i, chr, len;
+  if (this.length === 0) return hash;
+  for (i = 0, len = this.length; i < len; i++) {
+    chr   = this.charCodeAt(i);
+    hash  = ((hash << 5) - hash) + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+};
 
 document.getElementById("createRoomButton").addEventListener("click", function() {
   roomCode = null;
-  connectToServer();
+  startGame();
 });
 document.getElementById("roomCodeTextbox").addEventListener("keydown", function(event) {
   event.stopPropagation();
@@ -34,16 +46,43 @@ document.getElementById("roomCodeTextbox").addEventListener("keydown", function(
 document.getElementById("joinRoomButton").addEventListener("click", submitRoomCode);
 function submitRoomCode() {
   roomCode = document.getElementById("roomCodeTextbox").value;
-  connectToServer();
+  startGame();
+}
+document.getElementById("userNameTextbox").addEventListener("keydown", function(event) {
+  event.stopPropagation();
+  if (event.keyCode === 13) {
+    document.getElementById("passwordTextbox").focus()
+  }
+});
+document.getElementById("passwordTextbox").addEventListener("keydown", function(event) {
+  event.stopPropagation();
+  if (event.keyCode === 13) {
+    setTimeout(sendLogin(false), 0);
+  }
+});
+document.getElementById("loginButton").addEventListener("click", function(event) {sendLogin(false)});
+document.getElementById("createAccountButton").addEventListener("click", function(event) {sendLogin(true)});
+var username="";
+var password="";
+function sendLogin(create) {
+  username = document.getElementById("userNameTextbox").value;
+  password = document.getElementById("passwordTextbox").value.hashCode();
+  if(username=="" || password == 0){
+    document.getElementById("errorMessageDiv").innerHTML = "Enter a username and password.";
+    return;
+  }
+  sendMessage({cmd: "login", args: {username: username, password: password, create: create}});
 }
 
 function setScreenMode(newMode) {
   screenMode = newMode;
   var loadingMessage = null;
+  document.getElementById("errorMessageDiv").innerHTML = "";
   var activeDivId = (function() {
     switch (screenMode) {
       case SCREEN_MODE_PLAY: return "roomDiv";
       case SCREEN_MODE_LOGIN: return "loginDiv";
+      case SCREEN_MODE_JOIN_ROOM: return "joinRoomDiv";
       case SCREEN_MODE_DISCONNECTED:
         loadingMessage = "Disconnected...";
         return "loadingDiv";
@@ -59,10 +98,17 @@ function setScreenMode(newMode) {
       default: throw asdf;
     }
   })();
-  ["roomDiv", "loginDiv", "loadingDiv"].forEach(function(divId) {
+  ["roomDiv", "joinRoomDiv", "loadingDiv", "loginDiv"].forEach(function(divId) {
     setDivVisible(document.getElementById(divId), divId === activeDivId);
   });
-  if (activeDivId === "loginDiv") document.getElementById("roomCodeTextbox").focus();
+  if (activeDivId === "joinRoomDiv"){
+    document.getElementById("roomCodeTextbox").focus();
+    document.getElementById("roomCodeTextbox").select();
+  }
+  if (activeDivId === "loginDiv"){
+    document.getElementById("userNameTextbox").focus();
+    document.getElementById("userNameTextbox").select();
+  }
   document.getElementById("loadingMessageDiv").textContent = loadingMessage != null ? loadingMessage : "Please wait...";
 }
 
@@ -600,6 +646,7 @@ function getModifierMask(event) {
   );
 }
 document.addEventListener("keydown", function(event) {
+  if (screenMode != SCREEN_MODE_PLAY) return;
   if (dialogIsOpen) {
     if (event.keyCode === 27) closeDialog();
     return;
@@ -662,7 +709,7 @@ document.addEventListener("keydown", function(event) {
     case 13: // enter
       var message = prompt("Enter a message:", "");
       if (message === null) break;
-      message = "<b>" + myUser.userName + "(" + myUser.role + "): " + message + "</b><br>";
+      message = "<b>" + myUser.username + "(" + myUser.role + "): " + message + "</b><br>";
       sendMessage({cmd: "logMessage", args: message});
       document.getElementById("logContentsDiv").innerHTML += message;
       break;
@@ -1058,23 +1105,30 @@ function renderUserList() {
   var userListUl = document.getElementById("userListUl");
   var userIds = Object.keys(usersById);
   userIds.sort();
-  userListUl.innerHTML = userIds.map(function(userId) {
+  /*userListUl.innerHTML = userIds.map(function(userId) {
     return (
       '<li'+(userId === myUser.id ? ' id="myUserNameLi" title="Click to edit your name/role"' : '')+'>' +
-        sanitizeHtml(usersById[userId].userName) +
+        sanitizeHtml(usersById[userId].username) +
       '</li>');
-  }).join("");
+  }).join("");*/
+  userListUl.innerHTML = "";
+  for (var u in usersById){
+    userListUl.innerHTML += '<li'+(usersById[u].id === myUser.id ? ' id="myUserNameLi" title="Click to edit your role" ' : ' ') +
+        (usersById[u].loggedIn ? '' : 'style="color:grey"') + '>' +
+        sanitizeHtml(usersById[u].username) +
+      '</li>'
+  }
 
   getObjects().forEach(function(object) {
     var objectDefinition = getObjectDefinition(object.id);
     if (objectDefinition.labelPlayerName == null) return;
-    var userName = null;
+    var username = null;
     if (objectDefinition.labelPlayerName === myUser.role) {
-      userName = "You";
+      username = "You";
     } else {
       for (var i = 0; i < userIds.length; i++) {
         if (usersById[userIds[i]].role === objectDefinition.labelPlayerName) {
-          userName = usersById[userIds[i]].userName;
+          username = usersById[userIds[i]].username;
           break;
         }
       }
@@ -1087,8 +1141,8 @@ function renderUserList() {
       }
     }
     var labelText;
-    if (userName != null) {
-      labelText = userName + " ("+roleName+")";
+    if (username != null) {
+      labelText = username + " ("+roleName+")";
     } else {
       labelText = roleName;
     }
@@ -1106,15 +1160,15 @@ function showEditUserDialog() {
   modalMaskDiv.style.display = "block";
   editUserDiv.style.display = "block";
 
-  yourNameTextbox.value = myUser.userName;
+  //yourNameTextbox.value = myUser.username;
   yourRoleDropdown.innerHTML = '<option value="">Spectator</option>' + gameDefinition.roles.map(function(role) {
     return '<option value="'+role.id+'">' + sanitizeHtml(role.name) + '</option>';
   }).join("");
   yourRoleDropdown.value = myUser.role;
 
   dialogIsOpen = true;
-  yourNameTextbox.focus();
-  yourNameTextbox.select();
+  //yourNameTextbox.focus();
+  //yourNameTextbox.select();
 }
 function closeDialog() {
   modalMaskDiv.style.display = "none";
@@ -1124,8 +1178,8 @@ function closeDialog() {
   }
   dialogIsOpen = false;
 }
-var yourNameTextbox = document.getElementById("yourNameTextbox");
-yourNameTextbox.addEventListener("keydown", function(event) {
+//var yourNameTextbox = document.getElementById("yourNameTextbox");
+/*yourNameTextbox.addEventListener("keydown", function(event) {
   event.stopPropagation();
   if (event.keyCode === 13) {
     setTimeout(function() {
@@ -1146,15 +1200,15 @@ function submitYourName() {
       args: newName,
     });
     // anticipate
-    myUser.userName = newName;
+    myUser.username = newName;
     renderUserList();
   }
-}
+}*/
 var yourRoleDropdown = document.getElementById("yourRoleDropdown");
 var submitYourRoleButton = document.getElementById("submitYourRoleButton");
 submitYourRoleButton.addEventListener("click", submitYourRole);
-var yourRolePasswordTextBox = document.getElementById("yourRolePassword");
-yourRolePasswordTextBox.addEventListener("keydown", function(event) {
+//var yourRolePasswordTextBox = document.getElementById("yourRolePassword");
+/*yourRolePasswordTextBox.addEventListener("keydown", function(event) {
   event.stopPropagation();
   if (event.keyCode === 13) {
     setTimeout(function() {
@@ -1164,7 +1218,7 @@ yourRolePasswordTextBox.addEventListener("keydown", function(event) {
   } else if (event.keyCode === 27) {
     setTimeout(closeDialog, 0);
   }
-});
+});*/
 
 function submitYourRole() {
   var newRole = yourRoleDropdown.value;
@@ -1173,7 +1227,6 @@ function submitYourRole() {
       cmd: "changeMyRole",
       args: {
         newRole: newRole,
-        password: yourRolePassword.value,
       }
     });
   }
@@ -1528,6 +1581,27 @@ function makeWebSocket() {
   return new WebSocket(wsUrl);
 }
 
+function startGame() {
+  var roomCodeToSend = roomCode;
+  var gameName = ""
+  if (roomCode != null) {
+    roomCodeToSend = roomCode;
+    setScreenMode(SCREEN_MODE_WAITING_FOR_ROOM_CODE_CONFIRMATION);
+  } else {
+    roomCodeToSend = "new";
+    gameName = document.getElementById("selectGame").value;
+    setScreenMode(SCREEN_MODE_WAITING_FOR_CREATE_ROOM);
+  }
+  sendMessage({
+    cmd: "joinRoom",
+    args: {
+      roomCode: roomCodeToSend,
+      gameName: gameName
+    },
+  });
+}
+
+
 var socket;
 var isConnected = false;
 function connectToServer() {
@@ -1542,23 +1616,7 @@ function connectToServer() {
   function onOpen() {
     isConnected = true;
     console.log("connected");
-    var roomCodeToSend = roomCode;
-    var gameName = ""
-    if (roomCode != null) {
-      roomCodeToSend = roomCode;
-      setScreenMode(SCREEN_MODE_WAITING_FOR_ROOM_CODE_CONFIRMATION);
-    } else {
-      roomCodeToSend = "new";
-      gameName = document.getElementById("selectGame").value;
-      setScreenMode(SCREEN_MODE_WAITING_FOR_CREATE_ROOM);
-    }
-    sendMessage({
-      cmd: "joinRoom",
-      args: {
-        roomCode: roomCodeToSend,
-        gameName: gameName
-      },
-    });
+    setScreenMode(SCREEN_MODE_LOGIN);
   }
   function onMessage(event) {
     var msg = event.data;
@@ -1567,8 +1625,8 @@ function connectToServer() {
     var message = JSON.parse(msg);
     if (screenMode === SCREEN_MODE_WAITING_FOR_ROOM_CODE_CONFIRMATION && message.cmd === "badRoomCode") {
       // nice try
-      disconnect();
-      setScreenMode(SCREEN_MODE_LOGIN);
+      // disconnect();
+      setScreenMode(SCREEN_MODE_JOIN_ROOM);
       // TODO: show message that says we tried
       return;
     }
@@ -1580,8 +1638,9 @@ function connectToServer() {
           roomCode = message.args.roomCode;
           myUser = {
             id: message.args.userId,
-            userName: message.args.userName,
+            username: message.args.username,
             role: message.args.role,
+            loggedIn: true,
           };
           usersById[myUser.id] = myUser;
           message.args.users.forEach(function(otherUser) {
@@ -1595,25 +1654,44 @@ function connectToServer() {
         if (message.cmd === "makeAMove" || message.cmd === "logMessage") {
           makeAMove(message.args, true);
         } else if (message.cmd === "userJoined") {
-          usersById[message.args.id] = {
+          if(usersById[message.args.id]) usersById[message.args.id].loggedIn = true;
+          else usersById[message.args.id] = {
             id: message.args.id,
-            userName: message.args.userName,
+            username: message.args.username,
             role: message.args.role,
           };
           renderUserList();
         } else if (message.cmd === "userLeft") {
-          delete usersById[message.args.id];
+          usersById[message.args.id].loggedIn = false;
           renderUserList();
-        } else if (message.cmd === "changeMyName") {
-          usersById[message.args.id].userName = message.args.userName;
+        } /*else if (message.cmd === "changeMyName") {
+          usersById[message.args.id].username = message.args.username;
           renderUserList();
-        } else if (message.cmd === "changeMyRole") {
+        }*/ else if (message.cmd === "changeMyRole") {
           if (message.args.id === ""){ //failed
             window.alert("That role has already been chosen and a different password set.");
             break;
           }
           usersById[message.args.id].role = message.args.role;
           renderUserList();
+        }
+        break;
+      case SCREEN_MODE_LOGIN:
+        if (message.cmd === "login") {
+          document.getElementById("usernameReminder").innerHTML = "Logged in as " + message.args.username;
+          var gameList = "<ul>";
+          for (var i in message.args.gameList){
+            var game = message.args.gameList[i];
+            gameList += "<li>" + game.id + ": " + game.gameName + "<ul>";
+            for (var p in game.players) gameList += "<li>" + p + ": " + (game.players[p] == "" ? "Spectator" : game.players[p]) + "</li>";
+            gameList += "</ul></li>";
+          }
+          gameList += "</ul>";
+          document.getElementById("gameList").innerHTML = gameList;
+          setScreenMode(SCREEN_MODE_JOIN_ROOM);
+        }
+        if (message.cmd === "loginFailed") {
+          document.getElementById("errorMessageDiv").innerHTML = message.args;
         }
         break;
       default: throw asdf;
@@ -1700,7 +1778,7 @@ function moveToString(move){
   var userId = move[i++];
 
   // userID -> userRole is now handled by the server for other players
-  var userName = (userId === myUser.id) ? myUser.userName + "(" + myUser.role + ")" : userId;
+  var username = (userId === myUser.id) ? myUser.username + "(" + myUser.role + ")" : userId;
 
   var object = [];
   var fromX = [];
@@ -1739,7 +1817,7 @@ function moveToString(move){
   }
 
   if (fromFaceIndex[0] == -1){ // Roll
-    output += userName + " rolls " + possiblyHiddenName(object[0]);
+    output += username + " rolls " + possiblyHiddenName(object[0]);
     for(var i=1; i<object.length; i++) output += ", " + possiblyHiddenName(object[i]);
     output += ":";
     for(var i=0; i<object.length; i++) output += " " + (isHidden(toX[0] + object[0].width, toY[0] + object[0].height) ? "?" : toFaceIndex[i]+1);
@@ -1762,33 +1840,33 @@ function moveToString(move){
         if (toY[i] > maxY) maxY = toY[i];
       }
       if(minX == 99999) return ""; // everything was hidden
-      output += userName + " flips " + object.length + " objects in (" + minX + ", " + minY + ") - (" + maxX + ", " + maxY + ")<br>";
+      output += username + " flips " + object.length + " objects in (" + minX + ", " + minY + ") - (" + maxX + ", " + maxY + ")<br>";
     } else {
       if(isHidden(toX[0] + object[0].width, toY[0] + object[0].height) ) return ""; // comment this out if people need to roll dice behind a screen and aren't allowed to freely adjust them.
-      output += userName + " flips " + object[0].id;
+      output += username + " flips " + object[0].id;
       if(object[0].faces.length > 2) output += " to " + (toFaceIndex[0]+1);
       output += "<br>";
     }
   } else if (fromLabel[0] != toLabel[0]){ // Label
     for(var i=0; i<object.length; i++){
       if(isHidden(toX[i] + object[i].width, toY[i] + object[i].height) ) continue;
-      output += userName + " changes the label of " + object[i].id + " from " + fromLabel[i] + " to " + toLabel[i] + "<br>";
+      output += username + " changes the label of " + object[i].id + " from " + fromLabel[i] + " to " + toLabel[i] + "<br>";
     }
   } else { //Move, Shuffle, or Group
 
     if(stayInPlace){ // Shuffle
       if(isHidden(toX[0] + object[0].width, toY[0] + object[0].height) ) return "";
-      output += userName + " shuffles " + object.length + " objects at (" + toX[0] + ", " + toY[0] + ")<br>";
+      output += username + " shuffles " + object.length + " objects at (" + toX[0] + ", " + toY[0] + ")<br>";
     } else if (endSameXY){ // Group
       var tell=false;
       if(!isHidden(toX[0] + object[0].width, toY[0] + object[0].height) ) tell = true;
       for(var i=0; i<object.length; i++) if(!isHidden(fromX[i] + object[i].width, fromY[i] + object[i].height) ) tell = true;
-      if(tell) output += userName + " moves " + object.length + " objects to (" + toX[0] + ", " + toY[0] + ")<br>";
+      if(tell) output += username + " moves " + object.length + " objects to (" + toX[0] + ", " + toY[0] + ")<br>";
     } else { // Move
       if(object.length == 1 && !(isHidden(fromX[0] + object[0].width, fromY[0] + object[0].height) && isHidden(toX[0] + object[0].width, toY[0] + object[0].height))){
         var objectName = object[0].id;
         if(object[0].faces.length === 2 && fromFaceIndex[0] === 1 && toFaceIndex[0] === 1) objectName = "*****"; // if it looks like a face-down card, hide the name
-        output += userName + " moves " + objectName + " from (" + fromX[0] + ", " + fromY[0] + ") to (" + toX[0] + ", " + toY[0] + ")<br>";
+        output += username + " moves " + objectName + " from (" + fromX[0] + ", " + fromY[0] + ") to (" + toX[0] + ", " + toY[0] + ")<br>";
       } else {
         var hidden = true;
         for(var i=0; i<object.length; i++){
@@ -1797,7 +1875,7 @@ function moveToString(move){
             hidden = false;
         }
         if(hidden) return ""; // everything is hidden
-        output += userName + " moves " + object.length + " objects from (" + fromX[0] + ", " + fromY[0] + ") to (" + toX[0] + ", " + toY[0] + ")<br>";
+        output += username + " moves " + object.length + " objects from (" + fromX[0] + ", " + fromY[0] + ") to (" + toX[0] + ", " + toY[0] + ")<br>";
       }
     }
   }
@@ -1814,6 +1892,11 @@ function isHidden(x, y){
   }
   return false;
 }
+
+/*function listGames(userId){
+  if (!userId) userId = "";
+  sendMessage({cmd: "listGames", args: userId});
+}*/
 
 function possiblyHiddenName(object){
   if (isHidden(object.x + object.width/2, object.y + object.height/2)) return "*****";
@@ -1854,4 +1937,4 @@ function clamp(n, min, max) {
   return n;
 }
 
-setScreenMode(SCREEN_MODE_LOGIN);
+connectToServer();
