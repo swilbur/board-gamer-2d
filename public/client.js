@@ -1724,6 +1724,10 @@ function connectToServer() {
 function sendMessage(message) {
   socket.send(JSON.stringify(message));
 }
+function backupServer(){
+  sendMessage({cmd:"backup", args:""})
+}
+
 function makeAMove(move, shouldRender) {
   if(typeof move === "string"){ // it's just a log message
     document.getElementById("logContentsDiv").innerHTML += move;
