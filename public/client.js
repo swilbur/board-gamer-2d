@@ -331,7 +331,6 @@ function fixFloatingThingZ() {
   document.getElementById("roomInfoDiv").style.zIndex = z++;
   document.getElementById("logDiv").style.zIndex = z++;
   document.getElementById("helpDiv").style.zIndex = z++;
-  document.getElementById("rollingDiv").style.zIndex = z++;
   modalMaskDiv.style.zIndex = z++;
   editUserDiv.style.zIndex = z++;
 }
@@ -1824,12 +1823,19 @@ function moveToString(move){
     output += username + " rolls " + possiblyHiddenName(object[0]);
     for(var i=1; i<object.length; i++) output += ", " + possiblyHiddenName(object[i]);
     output += ":";
-    for(var i=0; i<object.length; i++) output += " " + (isHidden(toX[0] + object[0].width, toY[0] + object[0].height) ? "?" : toFaceIndex[i]+1);
+    for(var i=0; i<object.length; i++){
+      output += " " + (isHidden(toX[0] + object[0].width, toY[0] + object[0].height) ? "?" : toFaceIndex[i]+1);
+      var objectDiv = getObjectDiv(object[i].id);
+      objectDiv.classList.remove("spinning");
+      void objectDiv.offsetWidth; // trigger a reflow so it shows again
+      objectDiv.classList.add("spinning");
+      console.log(objectDiv.classList);
+    }
     output += "<br>";
-    var rollingMsg = document.getElementById("rollingDiv").children[0];
+    /*var rollingMsg = document.getElementById("rollingDiv").children[0];
     rollingMsg.classList.remove("show");
     void rollingMsg.offsetWidth; // trigger a reflow so it shows again
-    rollingMsg.classList.add("show");
+    rollingMsg.classList.add("show");*/
   } else if (fromFaceIndex[0] != toFaceIndex[0]){ // Flip
     if(object.length > 1){
       var minX = 99999;
@@ -1861,6 +1867,13 @@ function moveToString(move){
     if(stayInPlace){ // Shuffle
       if(isHidden(toX[0] + object[0].width, toY[0] + object[0].height) ) return "";
       output += username + " shuffles " + object.length + " objects at (" + toX[0] + ", " + toY[0] + ")<br>";
+      for(var i=0; i<object.length; i++){
+        var objectDiv = getObjectDiv(object[i].id);
+        objectDiv.classList.remove("spinning");
+        void objectDiv.offsetWidth; // trigger a reflow so it shows again
+        objectDiv.classList.add("spinning");
+        console.log(objectDiv.classList);
+      }
     } else if (endSameXY){ // Group
       var tell=false;
       if(!isHidden(toX[0] + object[0].width, toY[0] + object[0].height) ) tell = true;
