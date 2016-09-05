@@ -1662,6 +1662,7 @@ function connectToServer() {
             id: message.args.id,
             username: message.args.username,
             role: message.args.role,
+            loggedIn: message.args.loggedIn,
           };
           renderUserList();
         } else if (message.cmd === "userLeft") {
