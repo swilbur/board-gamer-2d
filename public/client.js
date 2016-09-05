@@ -366,6 +366,7 @@ function onObjectMouseDown(event) {
   var objectDiv = this;
   var object = objectsById[objectDiv.dataset.id];
   if (object.locked || object.immobile) return; // click thee behind me, satan
+  if (isHidden(object.x + object.width/2, object.y + object.height/2, true)) return;
   event.preventDefault();
   event.stopPropagation();
 
@@ -414,6 +415,7 @@ function onObjectMouseMove(event) {
   var objectDiv = this;
   var object = objectsById[objectDiv.dataset.id];
   if (object.locked) return;
+  if (isHidden(object.x + object.width/2, object.y + object.height/2, true)) return;
   setHoverObject(object);
 }
 function onObjectMouseOut(event) {
@@ -453,6 +455,7 @@ document.addEventListener("mousemove", function(event) {
       var newSelectedObjects = [];
       getObjects().forEach(function(object) {
         if (object.locked || object.immobile) return;
+        if (isHidden(object.x + object.width/2, object.y + object.height/2, true)) return;
         if (object.x > maxX) return;
         if (object.y > maxY) return;
         if (object.x + object.width  < minX) return;
@@ -1265,7 +1268,7 @@ function render(object, isAnimated) {
   }
   if (objectDefinition.locked) {
     z = 0;
-  } else {
+  } else { //can I reduce this using isHidden()?
     for (var i = 0; i < hiderContainers.length; i++) {
       var hiderContainer = hiderContainers[i];
       if (hiderContainer.x <= x+object.width /2 && x+object.width /2 <= hiderContainer.x + hiderContainer.width &&
@@ -1825,7 +1828,7 @@ function moveToString(move){
     for(var i=1; i<object.length; i++) output += ", " + possiblyHiddenName(object[i]);
     output += ":";
     for(var i=0; i<object.length; i++){
-      output += " " + (isHidden(toX[0] + object[0].width, toY[0] + object[0].height) ? "?" : toFaceIndex[i]+1);
+      output += " " + (isHidden(toX[0] + object[0].width/2, toY[0] + object[0].height/2) ? "?" : toFaceIndex[i]+1);
       var objectDiv = getObjectDiv(object[i].id);
       objectDiv.classList.remove("spinning");
       void objectDiv.offsetWidth; // trigger a reflow so it shows again
@@ -1843,7 +1846,7 @@ function moveToString(move){
       var minY = 99999;
       var maxY = -99999;
       for(var i=0; i<object.length; i++){
-        if(isHidden(toX[i] + object[i].width, toY[i] + object[i].height) ) continue; // comment this out if people need to roll dice behind a screen and aren't allowed to freely adjust them.
+        if(isHidden(toX[i] + object[i].width/2, toY[i] + object[i].height/2) ) continue; // comment this out if people need to roll dice behind a screen and aren't allowed to freely adjust them.
         if (toX[i] < minX) minX = toX[i];
         if (toX[i] > maxX) maxX = toX[i];
         if (toY[i] < minY) minY = toY[i];
@@ -1852,20 +1855,20 @@ function moveToString(move){
       if(minX == 99999) return ""; // everything was hidden
       output += username + " flips " + object.length + " objects in (" + minX + ", " + minY + ") - (" + maxX + ", " + maxY + ")<br>";
     } else {
-      if(isHidden(toX[0] + object[0].width, toY[0] + object[0].height) ) return ""; // comment this out if people need to roll dice behind a screen and aren't allowed to freely adjust them.
+      if(isHidden(toX[0] + object[0].width/2, toY[0] + object[0].height/2) ) return ""; // comment this out if people need to roll dice behind a screen and aren't allowed to freely adjust them.
       output += username + " flips " + object[0].id;
       if(object[0].faces.length > 2) output += " to " + (toFaceIndex[0]+1);
       output += "<br>";
     }
   } else if (fromLabel[0] != toLabel[0]){ // Label
     for(var i=0; i<object.length; i++){
-      if(isHidden(toX[i] + object[i].width, toY[i] + object[i].height) ) continue;
+      if(isHidden(toX[i] + object[i].width/2, toY[i] + object[i].height/2) ) continue;
       output += username + " changes the label of " + object[i].id + " from " + fromLabel[i] + " to " + toLabel[i] + "<br>";
     }
   } else { //Move, Shuffle, or Group
 
     if(stayInPlace){ // Shuffle
-      if(isHidden(toX[0] + object[0].width, toY[0] + object[0].height) ) return "";
+      if(isHidden(toX[0] + object[0].width/2, toY[0] + object[0].height/2) ) return "";
       output += username + " shuffles " + object.length + " objects at (" + toX[0] + ", " + toY[0] + ")<br>";
       for(var i=0; i<object.length; i++){
         var objectDiv = getObjectDiv(object[i].id);
@@ -1875,19 +1878,19 @@ function moveToString(move){
       }
     } else if (endSameXY){ // Group
       var tell=false;
-      if(!isHidden(toX[0] + object[0].width, toY[0] + object[0].height) ) tell = true;
-      for(var i=0; i<object.length; i++) if(!isHidden(fromX[i] + object[i].width, fromY[i] + object[i].height) ) tell = true;
+      if(!isHidden(toX[0] + object[0].width/2, toY[0] + object[0].height/2) ) tell = true;
+      for(var i=0; i<object.length; i++) if(!isHidden(fromX[i] + object[i].width/2, fromY[i] + object[i].height/2) ) tell = true;
       if(tell) output += username + " moves " + object.length + " objects to (" + toX[0] + ", " + toY[0] + ")<br>";
     } else { // Move
-      if(object.length == 1 && !(isHidden(fromX[0] + object[0].width, fromY[0] + object[0].height) && isHidden(toX[0] + object[0].width, toY[0] + object[0].height))){
+      if(object.length == 1 && !(isHidden(fromX[0] + object[0].width/2, fromY[0] + object[0].height/2) && isHidden(toX[0] + object[0].width/2, toY[0] + object[0].height/2))){
         var objectName = object[0].id;
         if(object[0].faces.length === 2 && fromFaceIndex[0] === 1 && toFaceIndex[0] === 1) objectName = "*****"; // if it looks like a face-down card, hide the name
         output += username + " moves " + objectName + " from (" + fromX[0] + ", " + fromY[0] + ") to (" + toX[0] + ", " + toY[0] + ")<br>";
       } else {
         var hidden = true;
         for(var i=0; i<object.length; i++){
-          if(!isHidden(fromX[i] + object[i].width, fromY[i] + object[i].height) || 
-             !isHidden(toX[i] + object[i].width, toY[i] + object[i].height) )
+          if(!isHidden(fromX[i] + object[i].width/2, fromY[i] + object[i].height/2) || 
+             !isHidden(toX[i] + object[i].width/2, toY[i] + object[i].height/2) )
             hidden = false;
         }
         if(hidden) return ""; // everything is hidden
@@ -1898,11 +1901,12 @@ function moveToString(move){
   return output;
 }
 
-function isHidden(x, y){
+function isHidden(x, y, showMine = false){
   for (var i = 0; i < hiderContainers.length; i++) {
     var hiderContainer = hiderContainers[i];
     if (hiderContainer.x <= x && x <= hiderContainer.x + hiderContainer.width &&
-        hiderContainer.y <= y && y <= hiderContainer.y + hiderContainer.height) {
+        hiderContainer.y <= y && y <= hiderContainer.y + hiderContainer.height &&
+        (!showMine || getObjectDefinition(hiderContainer.id).visionWhitelist.indexOf(myUser.role) === -1)) {
       return true;
     }
   }
