@@ -1147,6 +1147,7 @@ function renderUserList() {
     }
     var stackHeightDiv = getStackHeightDiv(object.id);
     stackHeightDiv.textContent = labelText;
+    stackHeightDiv.classList.add("userLabel");
     stackHeightDiv.style.display = "block";
   });
   document.getElementById("myUserNameLi").addEventListener("click", showEditUserDialog);
@@ -1829,7 +1830,6 @@ function moveToString(move){
       objectDiv.classList.remove("spinning");
       void objectDiv.offsetWidth; // trigger a reflow so it shows again
       objectDiv.classList.add("spinning");
-      console.log(objectDiv.classList);
     }
     output += "<br>";
     /*var rollingMsg = document.getElementById("rollingDiv").children[0];
@@ -1872,7 +1872,6 @@ function moveToString(move){
         objectDiv.classList.remove("spinning");
         void objectDiv.offsetWidth; // trigger a reflow so it shows again
         objectDiv.classList.add("spinning");
-        console.log(objectDiv.classList);
       }
     } else if (endSameXY){ // Group
       var tell=false;
