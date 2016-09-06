@@ -273,6 +273,10 @@ function preloadImagePath(path) {
     }
     checkForDoneLoading();
   });
+  img.addEventListener("error", function() {
+    facePathToUrlUrl[path] = "url(\"placeholder.png\")";
+    checkForDoneLoading();
+  });
 }
 function checkForDoneLoading() {
   for (var key in facePathToUrlUrl) {
@@ -1306,8 +1310,10 @@ function render(object, isAnimated) {
   objectDiv.style.zIndex = z;
   if (object.faces != null) {
     var facePath = object.faces[faceIndex];
-    var imageUrlUrl = facePathToUrlUrl[facePath];
-    if (imageUrlUrl !== "" && objectDiv.dataset.facePath !== facePath) {
+    var imageUrlUrl;
+    if (!facePath) imageUrlUrl = "url(\"placeholder.png\")";
+    else imageUrlUrl = facePathToUrlUrl[facePath];
+    if ( objectDiv.dataset.facePath !== facePath) {
       objectDiv.dataset.facePath = facePath;
       objectDiv.style.backgroundImage = imageUrlUrl;
     }
