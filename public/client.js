@@ -71,7 +71,9 @@ function sendLogin(create) {
     document.getElementById("errorMessageDiv").innerHTML = "Enter a username and password.";
     return;
   }
-  sendMessage({cmd: "login", args: {username: username, password: password, create: create}});
+  var confirmCode = ""
+  if(create) confirmCode = prompt("Ask Scott for the code to create an account:", "code")
+  sendMessage({cmd: "login", args: {username: username, password: password, create: create, code: confirmCode}});
 }
 
 function setScreenMode(newMode) {
