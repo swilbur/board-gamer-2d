@@ -1765,7 +1765,7 @@ function makeAMove(move, shouldRender) {
       newProps.y = toY;
       newProps.z = toZ;
       newProps.faceIndex = toFaceIndex;
-      newProps.label = label;
+      newProps.label = toLabel;
     }
     if (shouldRender) objectsToRender.push(object);
   }
