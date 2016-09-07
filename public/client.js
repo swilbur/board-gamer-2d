@@ -1972,9 +1972,24 @@ function addToLog(move){
       }
       break;
     case "turn":
-      for(var i=0; i<object.length; i++){
-        if(isHidden(toX[i] + object[i].width/2, toY[i] + object[i].height/2) ) continue;
-        output += username + " turns " + object[i].id + " from " + fromAngle[i] + " to " + toAngle[i] + "<br>";
+      var prevX = -99999;
+      var prevY = -99999;
+      var num = 0;
+      for(var i=0; i<=object.length; i++){ // if you have a group of objects at the same place, don't report them individually
+        if(i == object.length || toX[i] != prevX || toY[i] != prevY){ // end of a group of colocated objects
+          if(!isHidden(prevX, prevY)){
+            if(num == 1){
+              output += username + " turns " + object[i-1].id + " from " + fromAngle[i-1] + " to " + toAngle[i-1] + "<br>";
+            }
+            if(num > 1){
+              output += username + " turns " + num + " objects at (" + prevX + ", " + prevY + ")<br>";
+            }
+          }
+          num = 0;
+        }
+        num ++;
+        prevX = toX[i];
+        prevY = toY[i];
       }
       break;
   }
