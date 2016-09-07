@@ -170,6 +170,7 @@ function initGame(game, history) {
       label: objectDefinition.label || 0,
       labelColor: objectDefinition.labelColor || [],
       floating: !!objectDefinition.floating,
+      angle: objectDefinition.angle || 0,
     };
     objectsById[id] = object;
     if (object.snapZones.length > 0) objectsWithSnapZones.push(object);
@@ -565,6 +566,7 @@ function newPropsForObject(object) {
     z: object.z,
     faceIndex: object.faceIndex,
     label: object.label,
+    angle: object.angle,
   };
 }
 function getEffectiveSelection(objects) {
@@ -587,7 +589,8 @@ function renderAndMaybeCommitSelection(selection, type="move") {
           object.y === newProps.y &&
           object.z === newProps.z &&
           object.faceIndex === newProps.faceIndex &&
-          object.label === newProps.label)) {
+          object.label === newProps.label &&
+          object.angle === newProps.angle)) {
       objectsToRender.push(object);
     }
   }
@@ -614,7 +617,8 @@ function commitSelection(selection, type="move") {
           object.y === newProps.y &&
           object.z === newProps.z &&
           object.faceIndex === newProps.faceIndex &&
-          object.label === newProps.label)) {
+          object.label === newProps.label &&
+          object.angle === newProps.angle)) {
       move.push(
         objectIndexesById[object.id],
         /*object.x,
@@ -626,7 +630,8 @@ function commitSelection(selection, type="move") {
         newProps.y,
         newProps.z,
         newProps.faceIndex,
-        newProps.label);
+        newProps.label,
+        newProps.angle);
       // anticipate
       /*object.x = newProps.x;
       object.y = newProps.y;
@@ -673,6 +678,10 @@ document.addEventListener("keydown", function(event) {
       return;
     case "G".charCodeAt(0):
       if (modifierMask === 0 && accordionMouseStartX == null) { groupSelection(); /*startAccordion(); isGKeyDown = true;*/ break; }
+      return;
+    case "T".charCodeAt(0):
+      if (modifierMask === 0) { turnSelection(1); break; }
+      if (modifierMask === SHIFT) { turnSelection(-1); break; }
       return;
     case 27: // Escape
       if (modifierMask === 0 && numberTypingBuffer.length > 0) { consumeNumberModifier(); break; }
@@ -794,6 +803,29 @@ function rollSelection() {
     objectDiv.classList.add("spinning");*/
   }
   renderAndMaybeCommitSelection(selection, "roll");
+  renderOrder();
+}
+function turnSelection(direction) {
+  var selection;
+  if (Object.keys(selectedObjectIdToNewProps).length > 0) {
+    // real selection
+    selection = selectedObjectIdToNewProps;
+  } else if (hoverObject != null){ 
+    // select all objects we're hovering over in this stack
+    var stackId = getStackId(hoverObject, hoverObject);
+    selection = {};
+    getObjects().forEach(function(object) {
+      if (stackId !== getStackId(object, object)) return;
+      selection[object.id] = newPropsForObject(object);
+    });
+  }
+  for (var id in selection) {
+    var newProps = selection[id];
+    newProps.angle += 90 * direction;
+    if(newProps.angle >= 360) newProps.angle -= 360;
+    if(newProps.angle < 0) newProps.angle += 360;
+  }
+  renderAndMaybeCommitSelection(selection, "turn");
   renderOrder();
 }
 function cancelMove() {
@@ -1280,12 +1312,14 @@ function render(object, isAnimated) {
   var y = object.y;
   var z = object.z;
   var faceIndex = object.faceIndex;
+  var angle = object.angle;
   var newProps = selectedObjectIdToNewProps[object.id];
   if (newProps != null) {
     x = newProps.x;
     y = newProps.y;
     z = newProps.z;
     faceIndex = newProps.faceIndex;
+    angle = newProps.angle;
   }
   if (objectDefinition.locked) {
     z = 0;
@@ -1323,6 +1357,7 @@ function render(object, isAnimated) {
   objectDiv.style.width  = object.width;
   objectDiv.style.height = object.height;
   objectDiv.style.zIndex = z;
+  objectDiv.style.transform="rotate(" + angle + "deg)";
   if (object.faces != null) {
     var facePath = object.faces[faceIndex];
     var imageUrlUrl;
@@ -1779,6 +1814,7 @@ function makeAMove(move, shouldRender) {
     var   toZ         =      move[i++];
     var   toFaceIndex =      move[i++];
     var   toLabel     =      move[i++];
+    var   toAngle     =      move[i++];
 
     if (shouldRender){
       if(type == "roll" || (type=="shuffle" && object.x == toX && object.y == toY)){
@@ -1795,6 +1831,7 @@ function makeAMove(move, shouldRender) {
     object.z = toZ;
     object.faceIndex = toFaceIndex;
     object.label = toLabel;
+    object.angle = toAngle;
     var newProps = selectedObjectIdToNewProps[object.id];
     if (newProps != null) {
       newProps.x = toX;
@@ -1802,6 +1839,7 @@ function makeAMove(move, shouldRender) {
       newProps.z = toZ;
       newProps.faceIndex = toFaceIndex;
       newProps.label = toLabel;
+      newProps.angle = toAngle;
     }
   }
 
@@ -1829,11 +1867,13 @@ function addToLog(move){
   var fromZ = [];
   var fromFaceIndex = [];
   var fromLabel = [];
+  var fromAngle = [];
   var toX = [];
   var toY = [];
   var toZ = [];
   var toFaceIndex = [];
   var toLabel = [];
+  var toAngle = [];
 
   while(i<move.length){
     object.push(objectsById[getIdFromIndex(move[i++])]);
@@ -1842,11 +1882,13 @@ function addToLog(move){
     fromZ.push(object[object.length-1].z);
     fromFaceIndex.push(object[object.length-1].faceIndex);
     fromLabel.push(object[object.length-1].label);
+    fromAngle.push(object[object.length-1].angle);
     toX.push(move[i++]);
     toY.push(move[i++]);
     toZ.push(move[i++]);
     toFaceIndex.push(move[i++]);
     toLabel.push(move[i++]);
+    toAngle.push(move[i++]);
   }
 
   var output = "";
@@ -1929,8 +1971,15 @@ function addToLog(move){
         output += username + " changes the label of " + object[i].id + " from " + fromLabel[i] + " to " + toLabel[i] + "<br>";
       }
       break;
+    case "turn":
+      for(var i=0; i<object.length; i++){
+        if(isHidden(toX[i] + object[i].width/2, toY[i] + object[i].height/2) ) continue;
+        output += username + " turns " + object[i].id + " from " + fromAngle[i] + " to " + toAngle[i] + "<br>";
+      }
+      break;
   }
   document.getElementById("logContentsDiv").innerHTML += output;
+  document.getElementById("logContentsDiv").scrollBy(0, 20);
 }
 
 function isHidden(x, y, showMine = false){
