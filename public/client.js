@@ -1011,6 +1011,7 @@ function toggleHelp() {
 
 function toggleLog() {
   isLogShown = !isLogShown;
+  document.getElementById("logContentsDiv").scrollTop += 99999;
   renderLog();
 }
 
@@ -1817,9 +1818,9 @@ function makeAMove(move, shouldRender) {
     var   toAngle     =      move[i++];
 
     if (shouldRender){
+      var objectDiv = getObjectDiv(object.id);
+      objectDiv.classList.remove("spinning");
       if(type == "roll" || (type=="shuffle" && object.x == toX && object.y == toY)){
-        var objectDiv = getObjectDiv(object.id);
-        objectDiv.classList.remove("spinning");
         void objectDiv.offsetWidth; // trigger a reflow so it shows again
         objectDiv.classList.add("spinning");
       }
@@ -1891,6 +1892,8 @@ function addToLog(move){
     toAngle.push(move[i++]);
   }
 
+  if(object.length == 0) return;
+
   var output = "";
   switch (type) { // calculate change type:  Move (change x,y), Flip (change faceIndex), Roll (fromFaceIndex == -1), Shuffle (change z), Group (move all to same x,y), Label (change label)
     case "move":
@@ -1901,7 +1904,7 @@ function addToLog(move){
         if(i == object.length || fromX[i] != prevX || fromY[i] != prevY){ // end of a group of colocated objects
           if(!isHidden(prevX, prevY) || (num > 0 && isHidden(prevX, prevY) != isHidden(toX[i-1], toY[i-1]))){ // report if it wasn't hidden or if it moved between two hidden zones
             if(num > 0) output += username + " moves ";
-            if(num == 1) output += object[i-1].id;
+            if(num == 1) output += (object[i-1].faces.length == 2 && fromFaceIndex[i-1] == 1 ? "*****" : object[i-1].id);
             if(num > 1) output += num + " objects";
             if(num > 0) output += " from (" + prevX + ", " + prevY + ") to (" + toX[i-1] + ", " + toY[i-1] + ")<br>";
           }
@@ -1994,7 +1997,7 @@ function addToLog(move){
       break;
   }
   document.getElementById("logContentsDiv").innerHTML += output;
-  document.getElementById("logContentsDiv").scrollBy(0, 20);
+  document.getElementById("logContentsDiv").scrollTop += 20;
 }
 
 function isHidden(x, y, showMine = false){
