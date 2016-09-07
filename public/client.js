@@ -1011,8 +1011,8 @@ function toggleHelp() {
 
 function toggleLog() {
   isLogShown = !isLogShown;
-  document.getElementById("logContentsDiv").scrollTop += 99999;
   renderLog();
+  document.getElementById("logContentsDiv").scrollTop += 99999;
 }
 
 document.getElementById("helpDiv").addEventListener("mousemove", function() {
