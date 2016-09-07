@@ -11,21 +11,18 @@ Ask me for the password if you're not a spambot.
 
 Working:
 
- * Create and join rooms. Empty rooms are deleted after an week.
+ * Create and join rooms. Empty rooms are deleted after a week.
+ * User authentication: keeps track of games you've played in, other users can't take your place unless you intentionally switch to a spectator.
  * Some objects are supported out of the box: Deck of 52 playing cards, d6 dice, checker board and checkers.
- * Decent controls to manipulate objects: Examine, group together, move around, flip over.
- * Numeric labels on objects: useful for tracking hit points, Twilight Struggle influence, etc.
+ * Decent controls to manipulate objects: Examine, group together, move around, flip over, turn 90 degrees.
+ * Labels on objects: useful for tracking hit points, Twilight Struggle influence, etc.
  * RNG Controls: Shuffle a stack, roll objects to show a random side.
  * Multiplayer experience is synced when you let go of the mouse, requiring fairly low network traffic.
  * Objects can be "locked" to serve as a background, and they can define a snap-to-grid area.
- * Individual players can have a special area where only they can see all sides of the objects in it;
+ * Individual players can have a special area where only they can interact with and see all sides of the objects in it;
    in other words, their hand of cards is hidden from opponents.
  * Game log is maintained server-side per room, and is accessible by any client even after joining late or refreshing the page.
  * Rudimentary chat ability in the game log
-
-Planned:
-
- * log in with your username, get a list of your active games
 
 ## Philosophy
 
@@ -76,6 +73,3 @@ Board Gamer 2d uses a random number generator for dice rolls and coin flips.
 Tabletop Simulator's system for creating a deck of cards has numerous problems.
 The Board Gamer 2d engine allows arbitrary images or spritesheets with arbitrary coordinates and dimensions for all objects.
 
-## Copyrighted Game Assets
-
-Some of the game files (e.g. twilight_struggle.js) use copyrighted assets.  These are not redistributed here, but most can be found online (e.g. at the publisher's website, boardgamegeek.com, twilightstrategy.com, etc.)
