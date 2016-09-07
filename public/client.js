@@ -130,7 +130,7 @@ var objectIndexesById;
 var objectsById;
 var objectsWithSnapZones; // cache
 var hiderContainers; // cache
-var changeHistory;
+//var changeHistory;
 //var futureChanges;
 var gameLog;
 function initGame(game, history) {
@@ -140,8 +140,8 @@ function initGame(game, history) {
   objectsById = {};
   objectsWithSnapZones = [];
   hiderContainers = [];
-  changeHistory = [];
-  futureChanges = [];
+  //changeHistory = [];
+  //futureChanges = [];
   gameLog = "";
   document.getElementById("logContentsDiv").innerHTML = gameLog;
   for (var i = 0; i < gameDefinition.objects.length; i++) {
@@ -170,6 +170,7 @@ function initGame(game, history) {
       label: objectDefinition.label || 0,
       labelColor: objectDefinition.labelColor || [],
       floating: !!objectDefinition.floating,
+      angle: objectDefinition.angle || 0,
     };
     objectsById[id] = object;
     if (object.snapZones.length > 0) objectsWithSnapZones.push(object);
@@ -413,7 +414,7 @@ function onObjectMouseDown(event) {
   newPropses.forEach(function(newProps, i) {
     newProps.z = z + i + 1;
   });
-  renderAndMaybeCommitSelection(selection);
+  renderAndMaybeCommitSelection(selection, "move");
   fixFloatingThingZ();
 }
 function onObjectMouseMove(event) {
@@ -517,7 +518,7 @@ document.addEventListener("mouseup", function(event) {
         render(object, true);
       }
     }
-    commitSelection(selectedObjectIdToNewProps);
+    commitSelection(selectedObjectIdToNewProps, "move");
     resizeTableToFitEverything();
     renderOrder();
     setSelectedObjects([]);
@@ -565,6 +566,7 @@ function newPropsForObject(object) {
     z: object.z,
     faceIndex: object.faceIndex,
     label: object.label,
+    angle: object.angle,
   };
 }
 function getEffectiveSelection(objects) {
@@ -577,7 +579,7 @@ function getEffectiveSelection(objects) {
   }
   return {};
 }
-function renderAndMaybeCommitSelection(selection) {
+function renderAndMaybeCommitSelection(selection, type="move") {
   var objectsToRender = [];
   // render
   for (var id in selection) {
@@ -587,13 +589,14 @@ function renderAndMaybeCommitSelection(selection) {
           object.y === newProps.y &&
           object.z === newProps.z &&
           object.faceIndex === newProps.faceIndex &&
-          object.label === newProps.label)) {
+          object.label === newProps.label &&
+          object.angle === newProps.angle)) {
       objectsToRender.push(object);
     }
   }
-  if (draggingMode === DRAG_NONE) {
+  if (draggingMode === DRAG_NONE || type != "move") {
     // if we're dragging, don't commit yet
-    commitSelection(selection);
+    commitSelection(selection, type);
   }
   // now that we've possibly committed a temporary selection, we can render.
   objectsToRender.forEach(render);
@@ -603,9 +606,10 @@ function renderAndMaybeCommitSelection(selection) {
   // it's too late to use this
   consumeNumberModifier();
 }
-function commitSelection(selection) {
+function commitSelection(selection, type="move") {
   var move = [];
   move.push(myUser.id);
+  move.push(type);
   for (var id in selection) {
     var object = objectsById[id];
     var newProps = selection[id];
@@ -613,25 +617,27 @@ function commitSelection(selection) {
           object.y === newProps.y &&
           object.z === newProps.z &&
           object.faceIndex === newProps.faceIndex &&
-          object.label === newProps.label)) {
+          object.label === newProps.label &&
+          object.angle === newProps.angle)) {
       move.push(
         objectIndexesById[object.id],
-        object.x,
+        /*object.x,
         object.y,
         object.z,
         object.faceIndex,
-        object.label,
+        object.label,*/
         newProps.x,
         newProps.y,
         newProps.z,
         newProps.faceIndex,
-        newProps.label);
+        newProps.label,
+        newProps.angle);
       // anticipate
-      object.x = newProps.x;
+      /*object.x = newProps.x;
       object.y = newProps.y;
       object.z = newProps.z;
       object.faceIndex = newProps.faceIndex;
-      object.label = newProps.label;
+      object.label = newProps.label;*/
     }
   }
   if (move.length <= 1) return;
@@ -640,7 +646,7 @@ function commitSelection(selection) {
     args: move,
   };
   sendMessage(message);
-  pushChangeToHistory(move);
+  makeAMove(move, true);
 }
 
 var SHIFT = 1;
@@ -672,6 +678,10 @@ document.addEventListener("keydown", function(event) {
       return;
     case "G".charCodeAt(0):
       if (modifierMask === 0 && accordionMouseStartX == null) { groupSelection(); /*startAccordion(); isGKeyDown = true;*/ break; }
+      return;
+    case "T".charCodeAt(0):
+      if (modifierMask === 0) { turnSelection(1); break; }
+      if (modifierMask === SHIFT) { turnSelection(-1); break; }
       return;
     case 27: // Escape
       if (modifierMask === 0 && numberTypingBuffer.length > 0) { consumeNumberModifier(); break; }
@@ -776,7 +786,7 @@ function flipOverSelection() {
       newProps.faceIndex = 0;
     }
   }
-  renderAndMaybeCommitSelection(selection);
+  renderAndMaybeCommitSelection(selection, "flip");
   renderOrder();
 }
 function rollSelection() {
@@ -786,8 +796,36 @@ function rollSelection() {
     var newProps = selection[id];
     newProps.faceIndex = Math.floor(Math.random() * object.faces.length);
     if (object.faces.length > 1) object.faceIndex = -1; //be sure to commit the roll even if it lands on the same number it was on previously
+
+    /*var objectDiv = getObjectDiv(id);
+    objectDiv.classList.remove("spinning");
+    void objectDiv.offsetWidth; // trigger a reflow so it shows again
+    objectDiv.classList.add("spinning");*/
   }
-  renderAndMaybeCommitSelection(selection);
+  renderAndMaybeCommitSelection(selection, "roll");
+  renderOrder();
+}
+function turnSelection(direction) {
+  var selection;
+  if (Object.keys(selectedObjectIdToNewProps).length > 0) {
+    // real selection
+    selection = selectedObjectIdToNewProps;
+  } else if (hoverObject != null){ 
+    // select all objects we're hovering over in this stack
+    var stackId = getStackId(hoverObject, hoverObject);
+    selection = {};
+    getObjects().forEach(function(object) {
+      if (stackId !== getStackId(object, object)) return;
+      selection[object.id] = newPropsForObject(object);
+    });
+  }
+  for (var id in selection) {
+    var newProps = selection[id];
+    newProps.angle += 90 * direction;
+    if(newProps.angle >= 360) newProps.angle -= 360;
+    if(newProps.angle < 0) newProps.angle += 360;
+  }
+  renderAndMaybeCommitSelection(selection, "turn");
   renderOrder();
 }
 function cancelMove() {
@@ -840,7 +878,16 @@ function shuffleSelection() {
     newPropsArray[otherIndex].y = tempY;
     newPropsArray[otherIndex].z = tempZ;
   }
-  renderAndMaybeCommitSelection(selection);
+  for(var id in selection){
+    var o = objectsById[id];
+    /*if(o.x == selection[id].x && o.y == selection[id].y && o.z != selection[id].z){
+      var objectDiv = getObjectDiv(id);
+      objectDiv.classList.remove("spinning");
+      void objectDiv.offsetWidth; // trigger a reflow so it shows again
+      objectDiv.classList.add("spinning");
+    }*/
+  }
+  renderAndMaybeCommitSelection(selection, "shuffle");
   renderOrder();
   resizeTableToFitEverything();
 }
@@ -877,7 +924,7 @@ function groupSelection() {
     newProps.x = medianNewProps.x;
     newProps.y = medianNewProps.y;
   }
-  renderAndMaybeCommitSelection(selection);
+  renderAndMaybeCommitSelection(selection, "group");
   renderOrder();
   resizeTableToFitEverything();
 }
@@ -1012,7 +1059,7 @@ function incrementLabel() {
     if(typeof(newProps.label) != "number") newProps.label = 0;
     newProps.label++;
   }
-  renderAndMaybeCommitSelection(selection);
+  renderAndMaybeCommitSelection(selection, "label");
   renderOrder();
 }
 
@@ -1025,7 +1072,7 @@ function decrementLabel() {
     if(typeof(newProps.label) != "number") newProps.label = 0;
     newProps.label--;
   }
-  renderAndMaybeCommitSelection(selection);
+  renderAndMaybeCommitSelection(selection, "label");
   renderOrder();
 }
 
@@ -1044,7 +1091,7 @@ function setLabel(){
     var newProps = selection[id];
     newProps.label = newLabel;
   }
-  renderAndMaybeCommitSelection(selection);
+  renderAndMaybeCommitSelection(selection, "label");
   renderOrder();
 }
 
@@ -1100,11 +1147,11 @@ function reverseChange(move) {
 
   return newMove;
 }*/
-function pushChangeToHistory(change) {
+/*function pushChangeToHistory(change) {
   changeHistory.push(change);
   document.getElementById("logContentsDiv").innerHTML += moveToString(change);
   //futureChanges = [];
-}
+}*/
 
 function eventToMouseX(event, div) { return event.clientX - div.getBoundingClientRect().left; }
 function eventToMouseY(event, div) { return event.clientY - div.getBoundingClientRect().top; }
@@ -1265,12 +1312,14 @@ function render(object, isAnimated) {
   var y = object.y;
   var z = object.z;
   var faceIndex = object.faceIndex;
+  var angle = object.angle;
   var newProps = selectedObjectIdToNewProps[object.id];
   if (newProps != null) {
     x = newProps.x;
     y = newProps.y;
     z = newProps.z;
     faceIndex = newProps.faceIndex;
+    angle = newProps.angle;
   }
   if (objectDefinition.locked) {
     z = 0;
@@ -1308,6 +1357,7 @@ function render(object, isAnimated) {
   objectDiv.style.width  = object.width;
   objectDiv.style.height = object.height;
   objectDiv.style.zIndex = z;
+  objectDiv.style.transform="rotate(" + angle + "deg)";
   if (object.faces != null) {
     var facePath = object.faces[faceIndex];
     var imageUrlUrl;
@@ -1746,27 +1796,42 @@ function makeAMove(move, shouldRender) {
     return;
   }
 
+  addToLog(move);
   var objectsToRender = shouldRender ? [] : null;
   var i = 0;
   var userId = move[i++];
-  if (userId === myUser.id) return;
+  var type = move[i++];
+  //if (userId === myUser.id) return;
   while (i < move.length) {
     var object = objectsById[getIdFromIndex(move[i++])];
-    var fromX         =      move[i++];
+    /*var fromX         =      move[i++];
     var fromY         =      move[i++];
     var fromZ         =      move[i++];
     var fromFaceIndex =      move[i++];
-    var fromLabel     =      move[i++];
+    var fromLabel     =      move[i++];*/
     var   toX         =      move[i++];
     var   toY         =      move[i++];
     var   toZ         =      move[i++];
     var   toFaceIndex =      move[i++];
     var   toLabel     =      move[i++];
+    var   toAngle     =      move[i++];
+
+    if (shouldRender){
+      if(type == "roll" || (type=="shuffle" && object.x == toX && object.y == toY)){
+        var objectDiv = getObjectDiv(object.id);
+        objectDiv.classList.remove("spinning");
+        void objectDiv.offsetWidth; // trigger a reflow so it shows again
+        objectDiv.classList.add("spinning");
+      }
+      objectsToRender.push(object);
+    }
+
     object.x = toX;
     object.y = toY;
     object.z = toZ;
     object.faceIndex = toFaceIndex;
     object.label = toLabel;
+    object.angle = toAngle;
     var newProps = selectedObjectIdToNewProps[object.id];
     if (newProps != null) {
       newProps.x = toX;
@@ -1774,8 +1839,8 @@ function makeAMove(move, shouldRender) {
       newProps.z = toZ;
       newProps.faceIndex = toFaceIndex;
       newProps.label = toLabel;
+      newProps.angle = toAngle;
     }
-    if (shouldRender) objectsToRender.push(object);
   }
 
   if (shouldRender) {
@@ -1786,12 +1851,12 @@ function makeAMove(move, shouldRender) {
     resizeTableToFitEverything();
     fixFloatingThingZ();
   }
-  pushChangeToHistory(move);
 }
 
-function moveToString(move){
+function addToLog(move){
   var i = 0;
   var userId = move[i++];
+  var type = move[i++];
 
   // userID -> userRole is now handled by the server for other players
   var username = (userId === myUser.id) ? myUser.username + "(" + myUser.role + ")" : userId;
@@ -1802,112 +1867,134 @@ function moveToString(move){
   var fromZ = [];
   var fromFaceIndex = [];
   var fromLabel = [];
+  var fromAngle = [];
   var toX = [];
   var toY = [];
   var toZ = [];
   var toFaceIndex = [];
   var toLabel = [];
+  var toAngle = [];
 
   while(i<move.length){
     object.push(objectsById[getIdFromIndex(move[i++])]);
-    fromX.push(move[i++]);
-    fromY.push(move[i++]);
-    fromZ.push(move[i++]);
-    fromFaceIndex.push(move[i++]);
-    fromLabel.push(move[i++]);
+    fromX.push(object[object.length-1].x);
+    fromY.push(object[object.length-1].y);
+    fromZ.push(object[object.length-1].z);
+    fromFaceIndex.push(object[object.length-1].faceIndex);
+    fromLabel.push(object[object.length-1].label);
+    fromAngle.push(object[object.length-1].angle);
     toX.push(move[i++]);
     toY.push(move[i++]);
     toZ.push(move[i++]);
     toFaceIndex.push(move[i++]);
     toLabel.push(move[i++]);
+    toAngle.push(move[i++]);
   }
 
   var output = "";
-  // calculate change type:  Move (change x,y), Flip (change faceIndex), Roll (fromFaceIndex == -1), Shuffle (change z), Group (move all to same x,y), Label (change label)
-
-  var stayInPlace = (object.length > 1);
-  var endSameXY = (object.length > 1);
-  for(var i=0; i<object.length; i++){
-    if(/*fromX[i] != fromX[0] || fromY[i] != fromY[0] ||*/ fromX[i] != toX[i] || fromY[i]!= toY[i]) stayInPlace = false;
-    if(toX[i] != toX[0] || toY[i] != toY[0]) endSameXY = false;
-  }
-
-  if (fromFaceIndex[0] == -1){ // Roll
-    output += username + " rolls " + possiblyHiddenName(object[0]);
-    for(var i=1; i<object.length; i++) output += ", " + possiblyHiddenName(object[i]);
-    output += ":";
-    for(var i=0; i<object.length; i++){
-      output += " " + (isHidden(toX[0] + object[0].width/2, toY[0] + object[0].height/2) ? "?" : toFaceIndex[i]+1);
-      var objectDiv = getObjectDiv(object[i].id);
-      objectDiv.classList.remove("spinning");
-      void objectDiv.offsetWidth; // trigger a reflow so it shows again
-      objectDiv.classList.add("spinning");
-    }
-    output += "<br>";
-    /*var rollingMsg = document.getElementById("rollingDiv").children[0];
-    rollingMsg.classList.remove("show");
-    void rollingMsg.offsetWidth; // trigger a reflow so it shows again
-    rollingMsg.classList.add("show");*/
-  } else if (fromFaceIndex[0] != toFaceIndex[0]){ // Flip
-    if(object.length > 1){
+  switch (type) { // calculate change type:  Move (change x,y), Flip (change faceIndex), Roll (fromFaceIndex == -1), Shuffle (change z), Group (move all to same x,y), Label (change label)
+    case "move":
+      var prevX = -99999;
+      var prevY = -99999;
+      var num = 0;
+      for(var i=0; i<=object.length; i++){ // if you have a group of objects at the same place, don't report them individually
+        if(i == object.length || fromX[i] != prevX || fromY[i] != prevY){ // end of a group of colocated objects
+          if(!isHidden(prevX, prevY) || (num > 0 && isHidden(prevX, prevY) != isHidden(toX[i-1], toY[i-1]))){ // report if it wasn't hidden or if it moved between two hidden zones
+            if(num > 0) output += username + " moves ";
+            if(num == 1) output += object[i-1].id;
+            if(num > 1) output += num + " objects";
+            if(num > 0) output += " from (" + prevX + ", " + prevY + ") to (" + toX[i-1] + ", " + toY[i-1] + ")<br>";
+          }
+          num = 0;
+        }
+        num ++;
+        prevX = fromX[i];
+        prevY = fromY[i];
+      }
+      break;
+    case "flip":
+      var prevX = -99999;
+      var prevY = -99999;
+      var num = 0;
+      for(var i=0; i<=object.length; i++){ // if you have a group of objects at the same place, don't report them individually
+        if(i == object.length || toX[i] != prevX || toY[i] != prevY){ // end of a group of colocated objects
+          if(!isHidden(prevX, prevY)){
+            if(num == 1){
+              output += username + " flips " + object[i-1].id;
+              if(object[i-1].faces.length > 2) output += " to " + (toFaceIndex[i-1]+1);
+              output += "<br>";
+            }
+            if(num > 1){
+              output += username + " flips " + num + " objects at (" + prevX + ", " + prevY + ")<br>";
+            }
+          }
+          num = 0;
+        }
+        num ++;
+        prevX = toX[i];
+        prevY = toY[i];
+      }
+      break;
+    case "roll":
+      output += username + " rolls " + possiblyHiddenName(object[0]);
+      for(var i=1; i<object.length; i++) output += ", " + possiblyHiddenName(object[i]);
+      output += ":";
+      for(var i=0; i<object.length; i++){
+        output += " " + (isHidden(toX[0] + object[0].width/2, toY[0] + object[0].height/2) ? "?" : toFaceIndex[i]+1);
+      }
+      output += "<br>";
+      break;
+    case "shuffle":
       var minX = 99999;
       var maxX = -99999;
       var minY = 99999;
       var maxY = -99999;
       for(var i=0; i<object.length; i++){
-        if(isHidden(toX[i] + object[i].width/2, toY[i] + object[i].height/2) ) continue; // comment this out if people need to roll dice behind a screen and aren't allowed to freely adjust them.
         if (toX[i] < minX) minX = toX[i];
         if (toX[i] > maxX) maxX = toX[i];
         if (toY[i] < minY) minY = toY[i];
         if (toY[i] > maxY) maxY = toY[i];
       }
-      if(minX == 99999) return ""; // everything was hidden
-      output += username + " flips " + object.length + " objects in (" + minX + ", " + minY + ") - (" + maxX + ", " + maxY + ")<br>";
-    } else {
-      if(isHidden(toX[0] + object[0].width/2, toY[0] + object[0].height/2) ) return ""; // comment this out if people need to roll dice behind a screen and aren't allowed to freely adjust them.
-      output += username + " flips " + object[0].id;
-      if(object[0].faces.length > 2) output += " to " + (toFaceIndex[0]+1);
-      output += "<br>";
-    }
-  } else if (fromLabel[0] != toLabel[0]){ // Label
-    for(var i=0; i<object.length; i++){
-      if(isHidden(toX[i] + object[i].width/2, toY[i] + object[i].height/2) ) continue;
-      output += username + " changes the label of " + object[i].id + " from " + fromLabel[i] + " to " + toLabel[i] + "<br>";
-    }
-  } else { //Move, Shuffle, or Group
-
-    if(stayInPlace){ // Shuffle
-      if(isHidden(toX[0] + object[0].width/2, toY[0] + object[0].height/2) ) return "";
-      output += username + " shuffles " + object.length + " objects at (" + toX[0] + ", " + toY[0] + ")<br>";
-      for(var i=0; i<object.length; i++){
-        var objectDiv = getObjectDiv(object[i].id);
-        objectDiv.classList.remove("spinning");
-        void objectDiv.offsetWidth; // trigger a reflow so it shows again
-        objectDiv.classList.add("spinning");
-      }
-    } else if (endSameXY){ // Group
+      output += username + " shuffles " + object.length + " objects ";
+      if(minX == maxX && minY == maxY) output += "at (" + minX + ", " + minY + ")<br>";
+      else output += "in (" + minX + " - " + maxX + ", " + minY + " - " + maxY + ")<br>";
+      break;
+    case "group":
       var tell=false;
       if(!isHidden(toX[0] + object[0].width/2, toY[0] + object[0].height/2) ) tell = true;
       for(var i=0; i<object.length; i++) if(!isHidden(fromX[i] + object[i].width/2, fromY[i] + object[i].height/2) ) tell = true;
-      if(tell) output += username + " moves " + object.length + " objects to (" + toX[0] + ", " + toY[0] + ")<br>";
-    } else { // Move
-      if(object.length == 1 && !(isHidden(fromX[0] + object[0].width/2, fromY[0] + object[0].height/2) && isHidden(toX[0] + object[0].width/2, toY[0] + object[0].height/2))){
-        var objectName = object[0].id;
-        if(object[0].faces.length === 2 && fromFaceIndex[0] === 1 && toFaceIndex[0] === 1) objectName = "*****"; // if it looks like a face-down card, hide the name
-        output += username + " moves " + objectName + " from (" + fromX[0] + ", " + fromY[0] + ") to (" + toX[0] + ", " + toY[0] + ")<br>";
-      } else {
-        var hidden = true;
-        for(var i=0; i<object.length; i++){
-          if(!isHidden(fromX[i] + object[i].width/2, fromY[i] + object[i].height/2) || 
-             !isHidden(toX[i] + object[i].width/2, toY[i] + object[i].height/2) )
-            hidden = false;
-        }
-        if(hidden) return ""; // everything is hidden
-        output += username + " moves " + object.length + " objects from (" + fromX[0] + ", " + fromY[0] + ") to (" + toX[0] + ", " + toY[0] + ")<br>";
+      if(tell) output += username + " groups " + object.length + " objects at (" + toX[0] + ", " + toY[0] + ")<br>";
+      break;
+    case "label":
+      for(var i=0; i<object.length; i++){
+        if(isHidden(toX[i] + object[i].width/2, toY[i] + object[i].height/2) ) continue;
+        output += username + " changes the label of " + object[i].id + " from " + fromLabel[i] + " to " + toLabel[i] + "<br>";
       }
-    }
+      break;
+    case "turn":
+      var prevX = -99999;
+      var prevY = -99999;
+      var num = 0;
+      for(var i=0; i<=object.length; i++){ // if you have a group of objects at the same place, don't report them individually
+        if(i == object.length || toX[i] != prevX || toY[i] != prevY){ // end of a group of colocated objects
+          if(!isHidden(prevX, prevY)){
+            if(num == 1){
+              output += username + " turns " + object[i-1].id + " from " + fromAngle[i-1] + " to " + toAngle[i-1] + "<br>";
+            }
+            if(num > 1){
+              output += username + " turns " + num + " objects at (" + prevX + ", " + prevY + ")<br>";
+            }
+          }
+          num = 0;
+        }
+        num ++;
+        prevX = toX[i];
+        prevY = toY[i];
+      }
+      break;
   }
-  return output;
+  document.getElementById("logContentsDiv").innerHTML += output;
+  document.getElementById("logContentsDiv").scrollBy(0, 20);
 }
 
 function isHidden(x, y, showMine = false){
@@ -1916,7 +2003,7 @@ function isHidden(x, y, showMine = false){
     if (hiderContainer.x <= x && x <= hiderContainer.x + hiderContainer.width &&
         hiderContainer.y <= y && y <= hiderContainer.y + hiderContainer.height &&
         (!showMine || getObjectDefinition(hiderContainer.id).visionWhitelist.indexOf(myUser.role) === -1)) {
-      return true;
+      return hiderContainer.id;
     }
   }
   return false;
