@@ -338,6 +338,7 @@ function fixFloatingThingZ() {
   document.getElementById("roomInfoDiv").style.zIndex = z++;
   document.getElementById("logDiv").style.zIndex = z++;
   document.getElementById("helpDiv").style.zIndex = z++;
+  document.getElementById("moveHighlighter").style.zIndex = z++;
   modalMaskDiv.style.zIndex = z++;
   editUserDiv.style.zIndex = z++;
 }
@@ -1906,7 +1907,7 @@ function addToLog(move){
             if(num > 0) output += username + " moves ";
             if(num == 1) output += (object[i-1].faces.length == 2 && fromFaceIndex[i-1] == 1 ? "*****" : object[i-1].id);
             if(num > 1) output += num + " objects";
-            if(num > 0) output += " from (" + prevX + ", " + prevY + ") to (" + toX[i-1] + ", " + toY[i-1] + ")<br>";
+            if(num > 0) output += " from <a onmouseenter='highlightMove("+prevX+","+prevY+","+object[i-1].width+","+object[i-1].height+")' onmouseleave='unHighlightMove()'>(" + prevX + ", " + prevY + ")</a> to <a onmouseenter='highlightMove("+toX[i-1]+","+toY[i-1]+","+object[i-1].width+","+object[i-1].height+")' onmouseleave='unHighlightMove()'>(" + toX[i-1] + ", " + toY[i-1] + ")</a><br>";
           }
           num = 0;
         }
@@ -1928,7 +1929,7 @@ function addToLog(move){
               output += "<br>";
             }
             if(num > 1){
-              output += username + " flips " + num + " objects at (" + prevX + ", " + prevY + ")<br>";
+              output += username + " flips " + num + " objects at <a onmouseenter='highlightMove("+prevX+","+prevY+","+object[i-1].width+","+object[i-1].height+")' onmouseleave='unHighlightMove()'>(" + prevX + ", " + prevY + ")</a><br>";
             }
           }
           num = 0;
@@ -1959,14 +1960,14 @@ function addToLog(move){
         if (toY[i] > maxY) maxY = toY[i];
       }
       output += username + " shuffles " + object.length + " objects ";
-      if(minX == maxX && minY == maxY) output += "at (" + minX + ", " + minY + ")<br>";
-      else output += "in (" + minX + " - " + maxX + ", " + minY + " - " + maxY + ")<br>";
+      if(minX == maxX && minY == maxY) output += "at <a onmouseenter='highlightMove("+minX+","+minY+","+object[0].width+","+object[0].height+")' onmouseleave='unHighlightMove()'>(" + minX + ", " + minY + ")</a><br>";
+      else output += "in <a onmouseenter='highlightMove("+minX+","+minY+","+(maxX-minX+object[0].width)+","+(maxY-minY+object[0].height)+")' onmouseleave='unHighlightMove()'>(" + minX + " - " + maxX + ", " + minY + " - " + maxY + ")</a><br>";
       break;
     case "group":
       var tell=false;
       if(!isHidden(toX[0] + object[0].width/2, toY[0] + object[0].height/2) ) tell = true;
       for(var i=0; i<object.length; i++) if(!isHidden(fromX[i] + object[i].width/2, fromY[i] + object[i].height/2) ) tell = true;
-      if(tell) output += username + " groups " + object.length + " objects at (" + toX[0] + ", " + toY[0] + ")<br>";
+      if(tell) output += username + " groups " + object.length + " objects at <a onmouseenter='highlightMove("+toX[0]+","+toY[0]+","+object[0].width+","+object[0].height+")' onmouseleave='unHighlightMove()'>(" + toX[0] + ", " + toY[0] + ")</a><br>";
       break;
     case "label":
       for(var i=0; i<object.length; i++){
@@ -1985,7 +1986,7 @@ function addToLog(move){
               output += username + " turns " + object[i-1].id + " from " + fromAngle[i-1] + " to " + toAngle[i-1] + "<br>";
             }
             if(num > 1){
-              output += username + " turns " + num + " objects at (" + prevX + ", " + prevY + ")<br>";
+              output += username + " turns " + num + " objects at <a onmouseenter='highlightMove("+prevX+","+prevY+","+object[i-1].width+","+object[i-1].height+")' onmouseleave='unHighlightMove()'>(" + prevX + ", " + prevY + ")</a><br>";
             }
           }
           num = 0;
@@ -1999,6 +2000,21 @@ function addToLog(move){
   document.getElementById("logContentsDiv").innerHTML += output;
   document.getElementById("logContentsDiv").scrollTop += 20;
 }
+
+function highlightMove(x, y, width, height){
+  var highlighter = document.getElementById("moveHighlighter");
+  highlighter.style.left = x;
+  highlighter.style.top  = y;
+  highlighter.style.width  = width;
+  highlighter.style.height = height;
+  fixFloatingThingZ();
+  setDivVisible(document.getElementById("moveHighlighter"), true);
+}
+
+function unHighlightMove(){
+  setDivVisible(document.getElementById("moveHighlighter"), false);
+}
+
 
 function isHidden(x, y, showMine = false){
   for (var i = 0; i < hiderContainers.length; i++) {

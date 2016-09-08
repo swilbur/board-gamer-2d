@@ -107,6 +107,9 @@
       .selected {
         box-shadow: 0 0 10px 5px rgba(256, 256, 0, 1.0);
       }
+      #moveHighlighter {
+        box-shadow: 0 0 10px 5px rgba(256, 256, 0, 1.0);
+      }
       .stackHeight {
         padding: 0.2em;
         background-color: rgba(256,256,256,0.7);
@@ -170,7 +173,9 @@
   </head>
   <body>
     <div id="roomDiv" style="display:none;">
-      <div id="tableDiv"></div>
+      <div id="tableDiv">
+        <div id="moveHighlighter" style="position:absolute; display:none"></div>
+      </div>
       <div id="selectionRectangleDiv" style="position:absolute; display:none; border:4px dotted #aaa; pointer-events: none;"></div>
       <div id="helpDiv" class="helpExpanded">
         <p style="font-size: 1.3em;">Help</p>
