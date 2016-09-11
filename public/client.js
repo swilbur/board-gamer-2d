@@ -364,8 +364,6 @@ var hoverObject;
 var lastMouseDragX;
 var lastMouseDragY;
 
-var accordionMouseStartX = null;
-var accordionObjectStartX = null;
 var isGKeyDown = false;
 
 function onObjectMouseDown(event) {
@@ -401,7 +399,6 @@ function onObjectMouseDown(event) {
   draggingMode = DRAG_MOVE_SELECTION;
   lastMouseDragX = eventToMouseX(event, tableDiv);
   lastMouseDragY = eventToMouseY(event, tableDiv);
-  if (isGKeyDown) startAccordion();
 
   // bring selection to top
   // effectively do a stable sort.
@@ -473,32 +470,16 @@ document.addEventListener("mousemove", function(event) {
       setSelectedObjects(newSelectedObjects);
     })();
   } else if (draggingMode === DRAG_MOVE_SELECTION) {
-    if (accordionMouseStartX != null) {
-      // accordion drag
-      var dx = x - accordionMouseStartX;
-      var objects = [];
-      for (var id in selectedObjectIdToNewProps) {
-        objects.push(objectsById[id]);
-      }
-      objects.sort(compareZ);
-      objects.forEach(function(object, i) {
-        var newProps = selectedObjectIdToNewProps[object.id];
-        var factor = i === objects.length - 1 ? 1 : i / (objects.length - 1);
-        newProps.x = Math.round(accordionObjectStartX + dx * factor);
-        render(object);
+    // normal drag
+    var dx = x - lastMouseDragX;
+    var dy = y - lastMouseDragY;
+    Object.keys(selectedObjectIdToNewProps).forEach(function(id) {
+      var object = objectsById[id];
+      var newProps = selectedObjectIdToNewProps[id];
+      newProps.x = Math.round(newProps.x + dx);
+      newProps.y = Math.round(newProps.y + dy);
+      render(object);
       });
-    } else {
-      // normal drag
-      var dx = x - lastMouseDragX;
-      var dy = y - lastMouseDragY;
-      Object.keys(selectedObjectIdToNewProps).forEach(function(id) {
-        var object = objectsById[id];
-        var newProps = selectedObjectIdToNewProps[id];
-        newProps.x = Math.round(newProps.x + dx);
-        newProps.y = Math.round(newProps.y + dy);
-        render(object);
-      });
-    }
     renderOrder();
     resizeTableToFitEverything();
     lastMouseDragX = x;
@@ -678,7 +659,8 @@ document.addEventListener("keydown", function(event) {
       if (modifierMask === 0) { flipOverSelection(); break; }
       return;
     case "G".charCodeAt(0):
-      if (modifierMask === 0 && accordionMouseStartX == null) { groupSelection(); /*startAccordion(); isGKeyDown = true;*/ break; }
+      if (modifierMask === 0) { groupSelection(); break; }
+      if (modifierMask === SHIFT) { fanSelection(); break; }
       return;
     case "T".charCodeAt(0):
       if (modifierMask === 0) { turnSelection(1); break; }
@@ -743,27 +725,10 @@ document.addEventListener("keyup", function(event) {
     case "Z".charCodeAt(0):
       unexamine();
       break;
-    /*case "G".charCodeAt(0):
-      if (modifierMask === 0) { stopAccordion(); isGKeyDown = false; break; }
-      return;*/
     default: return;
   }
   event.preventDefault();
 });
-
-function startAccordion() {
-  if (draggingMode !== DRAG_MOVE_SELECTION) return;
-  accordionMouseStartX = lastMouseDragX;
-  for (var id in selectedObjectIdToNewProps) {
-    // they're all the same
-    accordionObjectStartX = selectedObjectIdToNewProps[id].x;
-    break;
-  }
-}
-function stopAccordion() {
-  accordionMouseStartX = null;
-  accordionObjectStartX = null;
-}
 
 function flipOverSelection() {
   var selection;
@@ -926,6 +891,48 @@ function groupSelection() {
     newProps.y = medianNewProps.y;
   }
   renderAndMaybeCommitSelection(selection, "group");
+  renderOrder();
+  resizeTableToFitEverything();
+}
+function fanSelection() {
+  var stackId = null;
+  if (Object.keys(selectedObjectIdToNewProps).length > 0) {
+    // take the stack object[0] is in
+    for(var o in selectedObjectIdToNewProps){
+      stackId = getStackId(objectsById[o], objectsById[o]);
+      break;
+    }
+  } else if (hoverObject != null) {
+    // select all objects we're hovering over in this stack
+    stackId = getStackId(hoverObject, hoverObject);
+  } else {
+    // no selection
+    return;
+  }
+  var selection = {};
+  getObjects().forEach(function(object) {
+    if (stackId !== getStackId(object, object)) return;
+    selection[object.id] = newPropsForObject(object);
+  });
+  var selectionLength = Object.keys(selection).length;
+  if (selectionLength <= 1) return;
+  var objects = [];
+  var maxWidth = 0;
+  for (var id in selection) {
+    objects.push(objectsById[id]);
+    if (objectsById[id].width > maxWidth) maxWidth = objectsById[id].width;
+  }
+  var spacing = Math.round(maxWidth * 0.2);
+  objects.sort(compareZ);
+  var newX = objects[0].x;
+  var newY = objects[0].y;
+  objects.forEach(function(object, i) {
+    var newProps = selection[object.id];
+    newProps.x = newX + i*spacing
+    newProps.y = newY;
+    render(object);
+  });
+  renderAndMaybeCommitSelection(selection, "fan");
   renderOrder();
   resizeTableToFitEverything();
 }
@@ -1968,6 +1975,12 @@ function addToLog(move){
       if(!isHidden(toX[0] + object[0].width/2, toY[0] + object[0].height/2) ) tell = true;
       for(var i=0; i<object.length; i++) if(!isHidden(fromX[i] + object[i].width/2, fromY[i] + object[i].height/2) ) tell = true;
       if(tell) output += username + " groups " + object.length + " objects at <a onmouseenter='highlightMove("+toX[0]+","+toY[0]+","+object[0].width+","+object[0].height+")' onmouseleave='unHighlightMove()'>(" + toX[0] + ", " + toY[0] + ")</a><br>";
+      break;
+    case "fan":
+      var tell=false;
+      if(!isHidden(fromX[0] + object[0].width/2, fromY[0] + object[0].height/2) ) tell = true;
+      for(var i=0; i<object.length; i++) if(!isHidden(toX[i] + object[i].width/2, toY[i] + object[i].height/2) ) tell = true;
+      if(tell) output += username + " spreads " + object.length + " objects at <a onmouseenter='highlightMove("+toX[0]+","+toY[0]+","+(((object.length-1)*0.2+1)*object[0].width)+","+object[0].height+")' onmouseleave='unHighlightMove()'>(" + toX[0] + ", " + toY[0] + ")</a><br>";
       break;
     case "label":
       for(var i=0; i<object.length; i++){

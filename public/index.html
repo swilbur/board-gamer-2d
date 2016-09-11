@@ -109,6 +109,7 @@
       }
       #moveHighlighter {
         box-shadow: 0 0 10px 5px rgba(256, 256, 0, 1.0);
+        pointer-events: none;
       }
       .stackHeight {
         padding: 0.2em;
@@ -186,7 +187,7 @@
           R: Roll/flip object to show random side.<br>
           S: Shuffle.<br>
           G: Group into a stack.<br>
-          <!--Hold G+Drag: Fan out selected objects.<br>-->
+          Shift+G: Ungroup (fan out) a stack.<br>-->
           Z: Examine object.<br>
           Shift+Z: Examine stack of objects.<br>
           (Shift+)T: Turn an object (counter-)clockwise.<br>
@@ -234,10 +235,11 @@
       <hr>
       <p><input id="createRoomButton" type="button" class="largeTextButton" value="Create a Room"></p>
       <select id="selectGame">
-        <option>Checkers</option>
+        <option>Forbidden Stars</option>
         <option>Star Wars: Rebellion</option>
         <option>Twilight Struggle</option>
         <option>War of the Ring</option>
+        <option>Checkers</option>
       </select>
       <hr>
       <p>
