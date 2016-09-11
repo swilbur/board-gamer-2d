@@ -224,10 +224,10 @@ function getObjectDefinition(id) {
       var value = definition[property];
       if (property === "front") {
         if (result.faces == null) result.faces = [];
-        result.faces[0] = value;
+        if (!result.faces[0]) result.faces[0] = value;
       } else if (property === "back") {
         if (result.faces == null) result.faces = [];
-        result.faces[1] = value;
+        if (!result.faces[1]) result.faces[1] = value;
       } else {
         result[property] = value;
       }
@@ -368,7 +368,6 @@ var isGKeyDown = false;
 
 function onObjectMouseDown(event) {
   if (event.button !== 0) return;
-  if (examiningMode !== EXAMINE_NONE) return;
   var objectDiv = this;
   var object = objectsById[objectDiv.dataset.id];
   if (object.locked || object.immobile) return; // click thee behind me, satan
@@ -399,6 +398,10 @@ function onObjectMouseDown(event) {
   draggingMode = DRAG_MOVE_SELECTION;
   lastMouseDragX = eventToMouseX(event, tableDiv);
   lastMouseDragY = eventToMouseY(event, tableDiv);
+  if (examiningMode !== EXAMINE_NONE){ // pretend you clicked at the object's actual position
+    lastMouseDragX = object.x + object.width/2;
+    lastMouseDragY = object.y + object.height/2;
+  }
 
   // bring selection to top
   // effectively do a stable sort.
