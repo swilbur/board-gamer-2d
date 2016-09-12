@@ -300,7 +300,7 @@ function getIdFromIndex(i) {
 
 function deleteTableAndEverything() {
   closeDialog();
-  tableDiv.innerHTML = "";
+  tableDiv.innerHTML = '<div id="moveHighlighter" style="position:absolute; display:none"></div>';
   gameDefinition = null;
   objectDefinitionsById = null;
   objectIndexesById = null;
@@ -703,8 +703,8 @@ document.addEventListener("keydown", function(event) {
       break;
 
     case "L".charCodeAt(0):
-      setLabel();
-      break;
+      if(modifierMask === 0) {setLabel(); break;}
+      if(modifierMask === SHIFT) {toggleImmobile(); break;}
 
     case 32: // space
       toggleLog();
@@ -1100,11 +1100,20 @@ function setLabel(){
   var numericalLabel = parseInt(newLabel);
   if(numericalLabel.toString() == newLabel) newLabel = numericalLabel;
   for (var id in selection) {
+    if(!objectsById[id].hasLabel) continue;
     var newProps = selection[id];
     newProps.label = newLabel;
   }
   renderAndMaybeCommitSelection(selection, "label");
   renderOrder();
+}
+function toggleImmobile(){ // currently doesn't affect other players moving it
+  var selection = getEffectiveSelection();
+  for (var id in selection) {
+    var object = objectsById[id];
+    object.immobile = !object.immobile;
+  }
+  setSelectedObjects([]);
 }
 
 /*
