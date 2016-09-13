@@ -1097,6 +1097,7 @@ function setLabel(){
   }
   if (!promptForLabel) return;
   var newLabel = prompt("Enter new label:", "");
+  if (newLabel === null) return;
   var numericalLabel = parseInt(newLabel);
   if(numericalLabel.toString() == newLabel) newLabel = numericalLabel;
   for (var id in selection) {
