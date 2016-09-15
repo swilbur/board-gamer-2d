@@ -1930,7 +1930,8 @@ function addToLog(move){
             if(num > 0) output += username + " moves ";
             if(num == 1) output += (object[i-1].faces.length == 2 && fromFaceIndex[i-1] == 1 ? "*****" : object[i-1].id);
             if(num > 1) output += num + " objects";
-            if(num > 0) output += " from <a onmouseenter='highlightMove("+prevX+","+prevY+","+object[i-1].width+","+object[i-1].height+")' onmouseleave='unHighlightMove()'>(" + prevX + ", " + prevY + ")</a> to <a onmouseenter='highlightMove("+toX[i-1]+","+toY[i-1]+","+object[i-1].width+","+object[i-1].height+")' onmouseleave='unHighlightMove()'>(" + toX[i-1] + ", " + toY[i-1] + ")</a><br>";
+            //if(num > 0) output += " from <a onmouseenter='highlightMove("+prevX+","+prevY+","+object[i-1].width+","+object[i-1].height+")' onmouseleave='unHighlightMove()'>(" + prevX + ", " + prevY + ")</a> to <a onmouseenter='highlightMove("+toX[i-1]+","+toY[i-1]+","+object[i-1].width+","+object[i-1].height+")' onmouseleave='unHighlightMove()'>(" + toX[i-1] + ", " + toY[i-1] + ")</a><br>";
+            if(num > 0) output += " from " + addHighlighter(prevX, prevY, object[i-1].width, object[i-1].height, object[i-1].angle) + " to " + addHighlighter(toX[i-1], toY[i-1], object[i-1].width, object[i-1].height, object[i-1].angle) + "<br>";
           }
           num = 0;
         }
@@ -1952,7 +1953,7 @@ function addToLog(move){
               output += "<br>";
             }
             if(num > 1){
-              output += username + " flips " + num + " objects at <a onmouseenter='highlightMove("+prevX+","+prevY+","+object[i-1].width+","+object[i-1].height+")' onmouseleave='unHighlightMove()'>(" + prevX + ", " + prevY + ")</a><br>";
+              output += username + " flips " + num + " objects at " + addHighlighter(prevX, prevY, object[i-1].width, object[i-1].height, object[i-1].angle) + "<br>";
             }
           }
           num = 0;
@@ -1978,25 +1979,36 @@ function addToLog(move){
       var maxY = -99999;
       for(var i=0; i<object.length; i++){
         if (toX[i] < minX) minX = toX[i];
-        if (toX[i] > maxX) maxX = toX[i];
+        if (toX[i] + object[i].width > maxX) maxX = toX[i] + object[i].width;
         if (toY[i] < minY) minY = toY[i];
-        if (toY[i] > maxY) maxY = toY[i];
+        if (toY[i] + object[i].height > maxY) maxY = toY[i] + object[i].height;
       }
       output += username + " shuffles " + object.length + " objects ";
-      if(minX == maxX && minY == maxY) output += "at <a onmouseenter='highlightMove("+minX+","+minY+","+object[0].width+","+object[0].height+")' onmouseleave='unHighlightMove()'>(" + minX + ", " + minY + ")</a><br>";
-      else output += "in <a onmouseenter='highlightMove("+minX+","+minY+","+(maxX-minX+object[0].width)+","+(maxY-minY+object[0].height)+")' onmouseleave='unHighlightMove()'>(" + minX + " - " + maxX + ", " + minY + " - " + maxY + ")</a><br>";
+      //if(minX == maxX && minY == maxY) output += "at <a onmouseenter='highlightMove("+minX+","+minY+","+object[0].width+","+object[0].height+")' onmouseleave='unHighlightMove()'>(" + minX + ", " + minY + ")</a><br>";
+      //else output += "in <a onmouseenter='highlightMove("+minX+","+minY+","+(maxX-minX+object[0].width)+","+(maxY-minY+object[0].height)+")' onmouseleave='unHighlightMove()'>(" + minX + " - " + maxX + ", " + minY + " - " + maxY + ")</a><br>";
+      output += "at " + addHighlighter(minX, minY, maxX-minX, maxY-minY, 0) + "<br>";
       break;
     case "group":
       var tell=false;
       if(!isHidden(toX[0] + object[0].width/2, toY[0] + object[0].height/2) ) tell = true;
       for(var i=0; i<object.length; i++) if(!isHidden(fromX[i] + object[i].width/2, fromY[i] + object[i].height/2) ) tell = true;
-      if(tell) output += username + " groups " + object.length + " objects at <a onmouseenter='highlightMove("+toX[0]+","+toY[0]+","+object[0].width+","+object[0].height+")' onmouseleave='unHighlightMove()'>(" + toX[0] + ", " + toY[0] + ")</a><br>";
+      if(tell) output += username + " groups " + object.length + " objects at " + addHighlighter(toX[0], toY[0], object[0].width, object[0].height, object[0].angle) + "<br>";
       break;
     case "fan":
       var tell=false;
       if(!isHidden(fromX[0] + object[0].width/2, fromY[0] + object[0].height/2) ) tell = true;
-      for(var i=0; i<object.length; i++) if(!isHidden(toX[i] + object[i].width/2, toY[i] + object[i].height/2) ) tell = true;
-      if(tell) output += username + " spreads " + object.length + " objects at <a onmouseenter='highlightMove("+toX[0]+","+toY[0]+","+(((object.length-1)*0.2+1)*object[0].width)+","+object[0].height+")' onmouseleave='unHighlightMove()'>(" + toX[0] + ", " + toY[0] + ")</a><br>";
+      var minX = 99999;
+      var maxX = -99999;
+      var minY = 99999;
+      var maxY = -99999;
+      for(var i=0; i<object.length; i++){
+        if (toX[i] < minX) minX = toX[i];
+        if (toX[i] + object[i].width > maxX) maxX = toX[i] + object[i].width;
+        if (toY[i] < minY) minY = toY[i];
+        if (toY[i] + object[i].height > maxY) maxY = toY[i] + object[i].height;
+        if(!isHidden(toX[i] + object[i].width/2, toY[i] + object[i].height/2) ) tell = true;
+      }
+      if(tell) output += username + " spreads " + object.length + " objects at " + addHighlighter(minX, minY, maxX-minX, maxY-minY, 0) + "<br>";
       break;
     case "label":
       for(var i=0; i<object.length; i++){
@@ -2012,11 +2024,12 @@ function addToLog(move){
         if(i == object.length || toX[i] != prevX || toY[i] != prevY){ // end of a group of colocated objects
           if(!isHidden(prevX, prevY)){
             if(num == 1){
-              output += username + " turns " + object[i-1].id + " from " + fromAngle[i-1] + " to " + toAngle[i-1] + "<br>";
+              output += username + " turns " + (object[i-1].faces.length == 2 && fromFaceIndex[i-1] == 1 ? "*****" : object[i-1].id); + " from " + fromAngle[i-1] + " to " + toAngle[i-1];
             }
             if(num > 1){
-              output += username + " turns " + num + " objects at <a onmouseenter='highlightMove("+prevX+","+prevY+","+object[i-1].width+","+object[i-1].height+")' onmouseleave='unHighlightMove()'>(" + prevX + ", " + prevY + ")</a><br>";
+              output += username + " turns " + num + " objects";
             }
+            if (num > 0) output += " at " + addHighlighter(prevX, prevY, object[i-1].width, object[i-1].height, toAngle[i-1]) + "<br>";
           }
           num = 0;
         }
@@ -2028,14 +2041,22 @@ function addToLog(move){
   }
   document.getElementById("logContentsDiv").innerHTML += output;
   document.getElementById("logContentsDiv").scrollTop += 20;
+  return;
+
 }
 
-function highlightMove(x, y, width, height){
+function addHighlighter(x, y, width, height, angle=0){
+  return "<a onmouseenter='highlightMove("+x+","+y+","+width+","+height+","+angle+")' onmouseleave='unHighlightMove()'>(" + x + ", " + y + ")</a>";
+}
+
+
+function highlightMove(x, y, width, height, angle){
   var highlighter = document.getElementById("moveHighlighter");
   highlighter.style.left = x;
   highlighter.style.top  = y;
   highlighter.style.width  = width;
   highlighter.style.height = height;
+  highlighter.style.transform="rotate(" + angle + "deg)";
   fixFloatingThingZ();
   setDivVisible(document.getElementById("moveHighlighter"), true);
 }
