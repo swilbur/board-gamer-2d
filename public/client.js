@@ -1351,7 +1351,7 @@ function render(object, isAnimated) {
       if (hiderContainer.x <= x+object.width /2 && x+object.width /2 <= hiderContainer.x + hiderContainer.width &&
           hiderContainer.y <= y+object.height/2 && y+object.height/2 <= hiderContainer.y + hiderContainer.height) {
         var hiderContainerDefinition = getObjectDefinition(hiderContainer.id);
-        if (hiderContainerDefinition.visionWhitelist.indexOf(myUser.role) === -1) {
+        if (hiderContainerDefinition.visionWhitelist.indexOf(myUser.role) === -1 && object.faces.length > 1) {
           // blocked
           var forbiddenFaces = hiderContainerDefinition.hideFaces.map(resolveFace);
           var betterFaceIndex = -1;
@@ -1855,7 +1855,7 @@ function makeAMove(move, shouldRender) {
     object.label = toLabel;
     object.angle = toAngle;
     var newProps = selectedObjectIdToNewProps[object.id];
-    if (newProps != null) {
+    if (newProps != null && draggingMode != DRAG_MOVE_SELECTION) {
       newProps.x = toX;
       newProps.y = toY;
       newProps.z = toZ;
