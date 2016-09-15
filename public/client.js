@@ -1430,39 +1430,42 @@ function renderExaminingObjects() {
   });
 
   // how far in can we zoom?
-  var totalWidth = 0;
+  var maxWidth = 0;
   var maxHeight = 0;
   objects.forEach(function(object) {
-    totalWidth += object.width;
+    if (object.width > maxWidth) maxWidth = object.width;
     if (object.height > maxHeight) maxHeight = object.height;
   });
 
   var windowWidth  = window.innerWidth;
   var windowHeight = window.innerHeight;
   var windowAspectRatio = windowWidth / windowHeight;
-  var objectsAspectRatio = totalWidth / maxHeight;
+  var objectAspectRatio = maxWidth / maxHeight;
 
-  var bigHeight;
-  if (windowAspectRatio < objectsAspectRatio) {
-    bigHeight = windowWidth  / objectsAspectRatio;
-  } else {
-    bigHeight = windowHeight;
-  }
-  var zoomFactor = bigHeight / maxHeight;
+  var rows = Math.round(Math.sqrt(objects.length * objectAspectRatio / windowAspectRatio));
+  if(rows < 1) rows = 1;
+  var columns = Math.ceil(objects.length/rows);
+
+  var totalWidth = columns * maxWidth;
+  var totalHeight = rows * maxHeight;
+
+  var zoomFactor = Math.min(windowWidth/totalWidth, windowHeight / totalHeight);
   if (zoomFactor < 1.0) {
     // don't ever zoom out with this function. prefer overlapping objects.
     zoomFactor = 1.0;
     totalWidth = windowWidth;
+    totalHeight = windowHeight;
   }
-  var averageWidth = totalWidth / objects.length;
+  var averageWidth = totalWidth / columns;
+  var averageHeight = totalHeight / rows;
 
   var maxZ = findMaxZ();
   for (var i = 0; i < objects.length; i++) {
     var object = objects[i];
     var renderWidth  = object.width  * zoomFactor;
     var renderHeight = object.height * zoomFactor;
-    var renderX = averageWidth * i * zoomFactor;
-    var renderY = (windowHeight - renderHeight) / 2;
+    var renderX = averageWidth * (i%columns) * zoomFactor;
+    var renderY = averageHeight * Math.floor(i/columns) * zoomFactor;
     var objectDiv = getObjectDiv(object.id);
     objectDiv.classList.add("animatedMovement");
     objectDiv.style.left = renderX + window.scrollX;
