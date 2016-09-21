@@ -143,7 +143,6 @@ function initGame(game, history) {
   //changeHistory = [];
   //futureChanges = [];
   gameLog = "";
-  document.getElementById("logContentsDiv").innerHTML = gameLog;
   for (var i = 0; i < gameDefinition.objects.length; i++) {
     var rawDefinition = gameDefinition.objects[i];
     var id = rawDefinition.id;
@@ -205,6 +204,8 @@ function initGame(game, history) {
     makeAMove(move, false);
   });
 
+  document.getElementById("logContentsDiv").innerHTML = gameLog;
+  gameLog = "";
   document.getElementById("roomCodeSpan").textContent = roomCode;
 
   checkForDoneLoading();
@@ -327,13 +328,13 @@ function fixFloatingThingZ() {
   hiderContainers.forEach(function(object) {
     var objectDefinition = getObjectDefinition(object.id);
     var objectDiv = getObjectDiv(object.id);
-    if (objectDefinition.visionWhitelist.indexOf(myUser.role) === -1) {
+    /*if (objectDefinition.visionWhitelist.indexOf(myUser.role) === -1) {
       // blocked
       objectDiv.style.zIndex = z++;
     } else {
       // see it
-      objectDiv.style.zIndex = object.z;
-    }
+      */objectDiv.style.zIndex = object.z;/*
+    }*/
   });
   document.getElementById("roomInfoDiv").style.zIndex = z++;
   document.getElementById("logDiv").style.zIndex = z++;
@@ -1464,8 +1465,8 @@ function renderExaminingObjects() {
     var object = objects[i];
     var renderWidth  = object.width  * zoomFactor;
     var renderHeight = object.height * zoomFactor;
-    var renderX = averageWidth * (i%columns) * zoomFactor;
-    var renderY = averageHeight * Math.floor(i/columns) * zoomFactor;
+    var renderX = averageWidth * (i%columns) * zoomFactor - 8;
+    var renderY = averageHeight * Math.floor(i/columns) * zoomFactor - 8;
     var objectDiv = getObjectDiv(object.id);
     objectDiv.classList.add("animatedMovement");
     objectDiv.style.left = renderX + window.scrollX;
@@ -1821,7 +1822,7 @@ function makeAMove(move, shouldRender) {
     return;
   }
 
-  addToLog(move);
+  addToLog(move, shouldRender);
   var objectsToRender = shouldRender ? [] : null;
   var i = 0;
   var userId = move[i++];
@@ -1878,7 +1879,7 @@ function makeAMove(move, shouldRender) {
   }
 }
 
-function addToLog(move){
+function addToLog(move, shouldRender = false){
   var i = 0;
   var userId = move[i++];
   var type = move[i++];
@@ -2039,8 +2040,12 @@ function addToLog(move){
       }
       break;
   }
-  document.getElementById("logContentsDiv").innerHTML += output;
-  document.getElementById("logContentsDiv").scrollTop += 20;
+  if(shouldRender){
+    document.getElementById("logContentsDiv").innerHTML += output;
+    document.getElementById("logContentsDiv").scrollTop += 20;
+  }else{
+    gameLog += output;
+  }
   return;
 
 }
