@@ -1770,7 +1770,8 @@ function connectToServer() {
           var gameList = "<ul>";
           for (var i in message.args.gameList){
             var game = message.args.gameList[i];
-            gameList += "<li> <input id=\"gameList"+game.id+"\"type=\"button\" class=\"largeTextButton\" value=\""+game.id+"\" onclick=\"roomCode='"+game.id+"'; startGame();\"> "+game.gameName+"<ul>";
+            var lastAccessed = new Date(game.lastAccessed);
+            gameList += "<li> <input id=\"gameList"+game.id+"\"type=\"button\" class=\"largeTextButton\" value=\""+game.id+"\" onclick=\"roomCode='"+game.id+"'; startGame();\"> "+game.gameName+"<br>"+lastAccessed.toLocaleString()+"<ul>";
             for (var p in game.players) gameList += "<li>" + p + ": " + (game.players[p] == "" ? "Spectator" : game.players[p]) + "</li>";
             gameList += "</ul></li>";
           }
