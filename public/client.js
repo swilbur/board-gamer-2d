@@ -601,32 +601,25 @@ function commitSelection(selection, type="move") {
   for (var id in selection) {
     var object = objectsById[id];
     var newProps = selection[id];
-    if (!(object.x === newProps.x &&
-          object.y === newProps.y &&
-          object.z === newProps.z &&
-          object.faceIndex === newProps.faceIndex &&
-          object.label === newProps.label &&
-          object.angle === newProps.angle)) {
-      move.push(
-        objectIndexesById[object.id],
-        /*object.x,
-        object.y,
-        object.z,
-        object.faceIndex,
-        object.label,*/
-        newProps.x,
-        newProps.y,
-        newProps.z,
-        newProps.faceIndex,
-        newProps.label,
-        newProps.angle);
-      // anticipate
-      /*object.x = newProps.x;
-      object.y = newProps.y;
-      object.z = newProps.z;
-      object.faceIndex = newProps.faceIndex;
-      object.label = newProps.label;*/
-    }
+    move.push(
+      objectIndexesById[object.id],
+      /*object.x,
+      object.y,
+      object.z,
+      object.faceIndex,
+      object.label,*/
+      newProps.x,
+      newProps.y,
+      newProps.z,
+      newProps.faceIndex,
+      newProps.label,
+      newProps.angle);
+    // anticipate
+    /*object.x = newProps.x;
+    object.y = newProps.y;
+    object.z = newProps.z;
+    object.faceIndex = newProps.faceIndex;
+    object.label = newProps.label;*/
   }
   if (move.length <= 1) return;
   var message = {
@@ -1111,12 +1104,17 @@ function setLabel(){
   renderAndMaybeCommitSelection(selection, "label");
   renderOrder();
 }
-function toggleImmobile(){ // currently doesn't affect other players moving it
+function toggleImmobile(){
   var selection = getEffectiveSelection();
+  if(selection.length == 0) return;
+  var newImmobile="tmp";
   for (var id in selection) {
     var object = objectsById[id];
-    object.immobile = !object.immobile;
+    if(newImmobile=="tmp") newImmobile = !object.immobile;
+    object.immobile = newImmobile;
   }
+  if(newImmobile) renderAndMaybeCommitSelection(selection, "lock");
+  if(!newImmobile) renderAndMaybeCommitSelection(selection, "unlock");
   setSelectedObjects([]);
 }
 
@@ -1870,6 +1868,8 @@ function makeAMove(move, shouldRender) {
       newProps.label = toLabel;
       newProps.angle = toAngle;
     }
+    if(type=="lock") object.immobile=true;
+    if(type=="unlock") object.immobile=false;
   }
 
   if (shouldRender) {
@@ -2041,6 +2041,14 @@ function addToLog(move, shouldRender = false){
         prevX = toX[i];
         prevY = toY[i];
       }
+      break;
+    case "lock":
+      for(var i=0; i<object.length; i++)
+        output += username + " locks " + object[i].id + " in place<br>";
+      break;
+    case "unlock":
+      for(var i=0; i<object.length; i++)
+        output += username + " unlocks " + object[i].id + "<br>";
       break;
   }
   if(shouldRender){
