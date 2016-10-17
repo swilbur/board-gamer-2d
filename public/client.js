@@ -10,6 +10,8 @@ var SCREEN_MODE_WAITING_FOR_ROOM_CODE_CONFIRMATION = 5;
 var SCREEN_MODE_PLAY = 6;
 var screenMode = SCREEN_MODE_LOGIN;
 
+var PI180 = Math.PI/180;
+
 String.prototype.hashCode = function() {
   var hash = 0, i, chr, len;
   if (this.length === 0) return hash;
@@ -465,10 +467,10 @@ document.addEventListener("mousemove", function(event) {
       getObjects().forEach(function(object) {
         if (object.locked || object.immobile) return;
         if (isHidden(object.x + object.width/2, object.y + object.height/2, true)) return;
-        if (object.x > maxX) return;
-        if (object.y > maxY) return;
-        if (object.x + object.width  < minX) return;
-        if (object.y + object.height < minY) return;
+        if (object.x + object.width*(1-Math.abs(Math.cos(object.angle*PI180)))/2 - object.height*(Math.abs(Math.sin(object.angle*PI180)))/2 > maxX) return;
+        if (object.y + object.height*(1-Math.abs(Math.cos(object.angle*PI180)))/2 - object.width*(Math.abs(Math.sin(object.angle*PI180)))/2 > maxY) return;
+        if (object.x + object.width*(1+Math.abs(Math.cos(object.angle*PI180)))/2 + object.height*(Math.abs(Math.sin(object.angle*PI180)))/2 < minX) return;
+        if (object.y + object.height*(1+Math.abs(Math.cos(object.angle*PI180)))/2 + object.width*(Math.abs(Math.sin(object.angle*PI180)))/2 < minY) return;
         newSelectedObjects.push(object);
       });
       setSelectedObjects(newSelectedObjects);
