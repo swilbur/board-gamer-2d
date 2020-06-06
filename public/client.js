@@ -1653,14 +1653,14 @@ function operatorCompare(a, b) {
 }
 
 function makeWebSocket() {
-  //var host = location.host; // deployment
-  var host = "127.0.0.1"; // local testing
+  var host = location.host; // deployment
+  //var host = "127.0.0.1"; // local testing
   var pathname = location.pathname;
   var isHttps = location.protocol === "https:";
   var match = host.match(/^(.+):(\d+)$/);
   var defaultPort = isHttps ? 443 : 80;
-  //var port = match ? parseInt(match[2], 10) : defaultPort; // deployment
-  var port = "25407"; // local testing
+  var port = match ? parseInt(match[2], 10) : defaultPort; // deployment
+  //var port = "25407"; // local testing
   var hostName = match ? match[1] : host;
   var wsProto = isHttps ? "wss:" : "ws:";
   var wsUrl = wsProto + "//" + hostName + ":" + port + pathname;
