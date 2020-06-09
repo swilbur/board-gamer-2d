@@ -149,6 +149,10 @@ function initGame(game, history) {
     var rawDefinition = gameDefinition.objects[i];
     var id = rawDefinition.id;
     if (id == null) id = autogenerateId(i);
+    while (id in objectDefinitionsById){
+      id += "\x03"; // allow objects with same (displayed) id
+      gameDefinition.objects[i].id += "\x03";
+    }
     objectDefinitionsById[id] = rawDefinition;
     objectIndexesById[id] = i;
     if (rawDefinition.prototype) continue;
